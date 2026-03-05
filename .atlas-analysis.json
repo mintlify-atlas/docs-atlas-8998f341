@@ -1,0 +1,137 @@
+{
+  "projectType": "cli-tool",
+  "projectName": "DevCPC",
+  "projectDescription": "Complete development toolkit and CLI for building Amstrad CPC games with automated compilation, graphics conversion, and emulator integration.",
+  "theme": "aspen",
+  "primaryColor": "#94cb04",
+  "lightColor": "#545454",
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/project-structure",
+              "concepts/build-levels",
+              "concepts/configuration"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/creating-projects",
+              "guides/compiling-code",
+              "guides/graphics-conversion",
+              "guides/disk-images",
+              "guides/tape-images",
+              "guides/cartridge-images",
+              "guides/emulator-integration"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "advanced/c-compilation",
+              "advanced/8bp-library",
+              "advanced/custom-workflows",
+              "advanced/m4-board"
+            ]
+          },
+          {
+            "group": "Tools",
+            "pages": [
+              "tools/vscode-extension",
+              "tools/abasm",
+              "tools/sdcc",
+              "tools/graphics-converter"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "CLI Reference",
+        "groups": [
+          {
+            "group": "Commands",
+            "pages": [
+              "cli/new",
+              "cli/build",
+              "cli/clean",
+              "cli/run",
+              "cli/info",
+              "cli/validate",
+              "cli/update",
+              "cli/version",
+              "cli/help"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "config/project-settings",
+              "config/build-options",
+              "config/paths",
+              "config/emulator",
+              "config/graphics"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Examples",
+        "groups": [
+          {
+            "group": "Example Projects",
+            "pages": [
+              "examples/8bp-game",
+              "examples/asm-project",
+              "examples/basic-program",
+              "examples/c-project"
+            ]
+          },
+          {
+            "group": "Recipes",
+            "pages": [
+              "recipes/loading-screens",
+              "recipes/sprite-animation",
+              "recipes/music-sound",
+              "recipes/multi-file-projects"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Automated compilation for ASM, BASIC, C, and 8BP library",
+    "DSK/CDT/CPR disk and tape image generation",
+    "PNG to ASM sprite conversion with CPC palette support",
+    "PNG to SCN loading screen conversion",
+    "Project scaffolding with templates",
+    "RetroVirtualMachine emulator integration",
+    "Multi-platform support (macOS, Linux, Windows WSL)",
+    "Built-in ABASM assembler and toolchain"
+  ],
+  "publicApiSurface": [
+    "devcpc new <name>",
+    "devcpc build",
+    "devcpc clean",
+    "devcpc run [--dsk|--cdt]",
+    "devcpc info",
+    "devcpc validate",
+    "devcpc update",
+    "devcpc version",
+    "devcpc help"
+  ]
+}
