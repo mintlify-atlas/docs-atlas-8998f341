@@ -1,0 +1,334 @@
+---
+title: 'devcpc help'
+description: 'Display help information and available commands'
+icon: 'circle-question'
+---
+
+## Overview
+
+The `devcpc help` command displays comprehensive help information including available commands, options, usage examples, and links to documentation.
+
+## Syntax
+
+```bash
+devcpc help
+```
+
+## Aliases
+
+The help command can be invoked in multiple ways:
+
+```bash
+devcpc help
+devcpc --help
+devcpc -h
+devcpc          # No command shows help
+```
+
+## Output Example
+
+```
+═════════════════════════════════════════════════
+CLI v1.0.2
+By Destroyer 2026
+═════════════════════════════════════════════════
+
+SDK para Amstrad CPC
+
+Uso:
+  devcpc <comando> [opciones]
+
+Comandos disponibles:
+  new <nombre>      Crear nuevo proyecto
+  build             Compilar proyecto actual
+  clean             Limpiar archivos generados
+  run [--dsk|--cdt] Ejecutar en emulador (DSK o CDT)
+  info              Mostrar configuración
+  validate          Validar proyecto
+  update            Actualizar DevCPC
+  help              Mostrar ayuda
+  version           Mostrar versión
+
+Opciones de ejecución:
+  --dsk             Forzar ejecución desde disco (DSK)
+  --cdt             Forzar ejecución desde cinta (CDT)
+  Por defecto usa RUN_MODE del config (auto/dsk/cdt)
+
+Ejemplos:
+  devcpc new mi-juego       # Crear nuevo proyecto
+  devcpc build              # Compilar
+  devcpc run                # Ejecutar en emulador
+
+Documentación: https://github.com/destroyer-dcf/DevCPC
+```
+
+## Help Sections
+
+### Header
+
+Displays:
+- DevCPC logo (ASCII art keyboard)
+- Version number
+- Author information
+- Project description
+
+### Usage
+
+Shows command syntax:
+
+```
+Uso:
+  devcpc <comando> [opciones]
+```
+
+### Available Commands
+
+Lists all commands with brief descriptions:
+
+| Command | Description |
+|---------|-------------|
+| `new <nombre>` | Crear nuevo proyecto |
+| `build` | Compilar proyecto actual |
+| `clean` | Limpiar archivos generados |
+| `run [--dsk\|--cdt]` | Ejecutar en emulador (DSK o CDT) |
+| `info` | Mostrar configuración |
+| `validate` | Validar proyecto |
+| `update` | Actualizar DevCPC |
+| `help` | Mostrar ayuda |
+| `version` | Mostrar versión |
+
+### Execution Options
+
+Shows runtime flags:
+
+- `--dsk` - Force DSK execution
+- `--cdt` - Force CDT execution
+- Default behavior (uses RUN_MODE)
+
+### Examples
+
+Provides quick start examples:
+
+```bash
+devcpc new mi-juego       # Create new project
+devcpc build              # Compile
+devcpc run                # Execute in emulator
+```
+
+### Documentation Link
+
+Points to comprehensive documentation:
+
+```
+Documentación: https://github.com/destroyer-dcf/DevCPC
+```
+
+## Command Help
+
+For command-specific help, refer to individual command pages:
+
+- [`devcpc new`](/cli/new) - Project creation
+- [`devcpc build`](/cli/build) - Compilation process
+- [`devcpc clean`](/cli/clean) - Cleanup operations
+- [`devcpc run`](/cli/run) - Emulator execution
+- [`devcpc info`](/cli/info) - Configuration display
+- [`devcpc validate`](/cli/validate) - Project validation
+- [`devcpc update`](/cli/update) - Update process
+- [`devcpc version`](/cli/version) - Version information
+
+## Use Cases
+
+### Quick Reference
+
+When you forget a command:
+
+```bash
+devcpc help | grep run
+# Shows: run [--dsk|--cdt] Ejecutar en emulador (DSK o CDT)
+```
+
+### New User Onboarding
+
+First time using DevCPC:
+
+```bash
+devcpc help
+# Read overview
+devcpc new my-first-game
+```
+
+### Command Discovery
+
+Explore available commands:
+
+```bash
+devcpc help
+# See all commands
+devcpc help | grep "Comandos disponibles" -A 10
+```
+
+### Quick Start
+
+Get started quickly:
+
+```bash
+# 1. View help
+devcpc help
+
+# 2. Follow examples
+devcpc new mi-juego
+cd mi-juego
+devcpc build
+devcpc run
+```
+
+## Logo Display
+
+The help includes an ASCII art keyboard representing Amstrad CPC:
+
+```
+  [ASCII keyboard artwork]
+```
+
+This visual element:
+- Identifies DevCPC clearly
+- Adds retro computing aesthetic
+- Makes terminal output recognizable
+
+## Color Output
+
+The help uses colors for readability:
+
+- **Blue** - Headers and dividers
+- **Green** - Commands and success indicators
+- **Yellow** - Section titles
+- **Cyan** - Options and emphasis
+
+## Help in Workflow
+
+### Development Workflow
+
+```bash
+# Check available commands
+devcpc help
+
+# Create project
+devcpc new my-game
+
+# Get project info
+devcpc info
+
+# Build and run
+devcpc build && devcpc run
+```
+
+### Learning Workflow
+
+```bash
+# Start with help
+devcpc help
+
+# Try each command
+devcpc version
+devcpc new test-project
+cd test-project
+devcpc info
+devcpc validate
+devcpc build
+devcpc run
+devcpc clean
+```
+
+## Additional Resources
+
+For more detailed information:
+
+### Official Documentation
+
+- **GitHub Repository:** https://github.com/destroyer-dcf/DevCPC
+- **README:** Comprehensive guide with examples
+- **Wiki:** Detailed tutorials and guides
+
+### Related Projects
+
+- **8BP Library:** https://github.com/jjaranda13/8BP
+- **ABASM Assembler:** https://github.com/fragarco/abasm
+- **RetroVirtualMachine:** https://www.retrovirtualmachine.org/
+
+### Community
+
+- **Issues:** Report bugs and request features
+- **Discussions:** Ask questions and share projects
+
+## Error Handling
+
+### Unknown Command
+
+```bash
+devcpc unknown-command
+```
+
+**Output:**
+```
+Error: Comando desconocido 'unknown-command'
+
+[Shows full help output]
+```
+
+### No Arguments
+
+```bash
+devcpc
+```
+
+**Output:**
+```
+[Shows full help output]
+```
+
+## Scripting Help
+
+Extract help information in scripts:
+
+```bash
+#!/bin/bash
+
+# Get available commands
+devcpc help | grep -A 10 "Comandos disponibles:"
+
+# Check if command exists
+if devcpc help | grep -q "build"; then
+    echo "build command available"
+fi
+```
+
+## Help Updates
+
+The help output updates with each version:
+
+- New commands are added
+- Descriptions are refined
+- Examples are updated
+- Links are maintained
+
+Always use the latest version for up-to-date help:
+
+```bash
+devcpc update
+devcpc help
+```
+
+## Internationalization
+
+Currently DevCPC help is in Spanish:
+- Commands are in English
+- Descriptions are in Spanish
+- Examples use Spanish project names
+
+This may change in future versions.
+
+## Related Commands
+
+- [`devcpc version`](/cli/version) - Check version
+- [`devcpc info`](/cli/info) - Project-specific help
+- All other commands listed in help output

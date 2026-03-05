@@ -1,0 +1,448 @@
+---
+title: Tape Images (CDT)
+description: Creating and managing Amstrad CPC tape images with DevCPC
+---
+
+## Overview
+
+CDT (Cass Data Tape) files are tape images for Amstrad CPC that store programs sequentially, like real cassette tapes. DevCPC can automatically generate CDT files alongside DSK images.
+
+## What is a CDT?
+
+CDT is the standard format for Amstrad CPC cassette tapes. Unlike DSK (random access), CDT stores files sequentially:
+
+- **Sequential loading** - Files load in order
+- **Tape-like behavior** - Mimics real cassette tapes
+- **Authentic experience** - True-to-original loading
+- **Variable size** - Only uses space needed
+
+## Configuration
+
+Add to your `devcpc.conf`:
+
+```bash
+# Enable CDT generation
+CDT="${PROJECT_NAME}.cdt"
+
+# List files in loading order (CRITICAL)
+CDT_FILES="loader.bas 8BP0.bin main.bin"
+```
+
+### Important: File Order
+
+The order in `CDT_FILES` is **critical** - files are recorded and loaded sequentially:
+
+```bash
+# ✅ Correct: loader first, then binaries
+CDT_FILES="loader.bas 8BP0.bin game.bin"
+
+# ❌ Wrong: tries to load binaries before loader
+CDT_FILES="game.bin 8BP0.bin loader.bas"
+```
+
+## File Types Supported
+
+| Type | Extension | Description | CPC Load Command |
+|------|-----------|-------------|------------------|
+| **BASIC** | `.bas` | Tokenized BASIC | `RUN"` |
+| **Binary** | `.bin` | Machine code | `RUN"FILE"` |
+| **Screen** | `.scn` | Full screens | `RUN"SCREEN"` |
+| **Raw** | `.txt`, etc | Data files | Direct read |
+
+## CDT Creation Process
+
+During `devcpc build`, if CDT is configured:
+
+### Step 1: Read Map File
+
+DevCPC reads `${PROJECT_NAME}.map` to get:
+- File type (BASIC, binary, screen, raw)
+- Load address
+- Execute address
+
+### Step 2: Validate Files
+
+Checks that all files in `CDT_FILES`:
+- Exist in `obj/` directory
+- Are registered in map file
+- Have valid metadata
+
+### Step 3: Create Empty CDT
+
+Initializes the tape image:
+```bash
+python3 cdt.py --create my-game.cdt
+```
+
+### Step 4: Add Files in Order
+
+Adds each file sequentially:
+
+**BASIC/ASCII files:**
+```bash
+--put-ascii loader.bas --name "LOADER"
+```
+
+**Binary files:**
+```bash
+--put-bin 8BP0.bin --load-addr 0x5C30 --start-addr 0x5C30 --name "8BP0"
+```
+
+**Screen files:**
+```bash
+--put-bin title.scn --load-addr 0xC000 --start-addr 0xC000 --name "TITLE"
+```
+
+**Raw files:**
+```bash
+--put-raw data.bin --name "DATA"
+```
+
+### Step 5: Show Catalog
+
+Displays tape structure:
+```bash
+ℹ Catálogo del CDT:
+Block 0: LOADER (BASIC)
+Block 1: 8BP0 (Binary, 0x5C30)
+Block 2: MAIN (Binary, 0x4E20)
+```
+
+## Build Output Example
+
+```bash
+═══════════════════════════════════════
+  Crear Cinta CDT
+═══════════════════════════════════════
+
+ℹ CDT: space-game.cdt
+ℹ Archivos: loader.bas 8BP0.bin game.bin
+
+→ Creando CDT vacío...
+✓ CDT creado: dist/space-game.cdt
+
+→ Añadiendo loader.bas al CDT...
+ℹ   Tipo: BASIC
+ℹ   Name: LOADER
+✓ loader.bas añadido
+
+→ Añadiendo 8BP0.bin al CDT...
+ℹ   Tipo: BINARIO
+ℹ   Load: 0x5C30
+ℹ   Exec: 0x5C30
+ℹ   Name: 8BP0
+✓ 8BP0.bin añadido
+
+→ Añadiendo game.bin al CDT...
+ℹ   Tipo: BINARIO
+ℹ   Load: 0x4E20
+ℹ   Exec: 0x4E20
+ℹ   Name: GAME
+✓ game.bin añadido
+
+✓ 3 archivo(s) añadido(s) al CDT
+```
+
+## Loading from CDT
+
+### From CPC (464)
+
+```basic
+10 REM Start tape
+20 RUN"
+```
+
+The tape auto-plays and loads files in order.
+
+### From CPC (664/6128)
+
+Models with disk drives need to switch to tape:
+
+```basic
+10 |TAPE        ' Switch from disk to tape
+20 RUN"         ' Start loading
+```
+
+DevCPC automatically handles this when using `devcpc run --cdt`.
+
+## CDT vs DSK Comparison
+
+| Feature | CDT (Tape) | DSK (Disk) |
+|---------|------------|------------|
+| **Access** | Sequential | Random |
+| **Speed** | Slow (~1-5 min) | Fast (~instant) |
+| **Load command** | `RUN"` | `RUN"FILE"` |
+| **File order** | Critical | Doesn't matter |
+| **Size** | Variable | Fixed (178KB) |
+| **Authenticity** | High (retro) | Moderate |
+| **Use case** | Demos, nostalgia | Development, games |
+| **Hardware** | All CPCs | 664/6128/M4 |
+
+### When to Use CDT
+
+✅ **Use CDT for:**
+- Authentic retro experience
+- Demos and presentations
+- Type-in programs
+- Competitions requiring tape
+- CPC 464 (tape-only model)
+
+✅ **Use DSK for:**
+- Fast development cycle
+- Random file access
+- Multiple programs
+- Frequent updates
+
+## Running CDT Files
+
+### Automatic Mode
+
+```bash
+devcpc run
+```
+
+With `RUN_MODE="auto"` in config:
+- If CDT exists and is configured → uses CDT
+- Otherwise → uses DSK
+
+### Force CDT
+
+```bash
+devcpc run --cdt
+```
+
+Always uses tape, ignoring `RUN_MODE`.
+
+### Force DSK
+
+```bash
+devcpc run --dsk
+```
+
+Always uses disk, ignoring `RUN_MODE`.
+
+## Execution Modes
+
+Configure in `devcpc.conf`:
+
+```bash
+# Auto-detect (default)
+RUN_MODE="auto"
+
+# Always use disk
+RUN_MODE="dsk"
+
+# Always use tape
+RUN_MODE="cdt"
+```
+
+| Mode | Behavior | Override |
+|------|----------|----------|
+| `auto` | CDT if configured, else DSK | `--dsk` / `--cdt` |
+| `dsk` | Always DSK | `--cdt` |
+| `cdt` | Always CDT | `--dsk` |
+
+## Complete Example
+
+### Project Configuration
+
+```bash
+# devcpc.conf
+PROJECT_NAME="platformer"
+BUILD_LEVEL=2
+
+# Generate both formats
+DSK="${PROJECT_NAME}.dsk"
+CDT="${PROJECT_NAME}.cdt"
+
+# Files on tape (in order)
+CDT_FILES="intro.bas title.scn loader.bas 8BP2.bin"
+
+# Default to tape
+RUN_MODE="cdt"
+```
+
+### File Structure
+
+```
+platformer/
+├── bas/
+│   ├── intro.bas      # First: intro animation
+│   └── loader.bas     # Third: load game
+├── assets/
+│   └── screen/
+│       └── title.png  # Second: title screen
+├── asm/
+│   └── make_all_mygame.asm  # Fourth: game code
+└── devcpc.conf
+```
+
+### Build and Run
+
+```bash
+# Build both DSK and CDT
+devcpc build
+
+# Output:
+# - dist/platformer.dsk (all files, random access)
+# - dist/platformer.cdt (ordered files, sequential)
+
+# Test with tape
+devcpc run --cdt
+```
+
+### Loading Sequence
+
+**What happens on CPC:**
+
+1. **User types:** `RUN"`
+2. **Tape starts** playing
+3. **Loads intro.bas** → runs animation
+4. **Loads title.scn** → shows title (from intro.bas)
+5. **Loads loader.bas** → sets up memory
+6. **Loads 8BP2.bin** → game starts
+
+## File Order Best Practices
+
+### Typical Game Order
+
+```bash
+# Pattern: intro → screens → loader → code
+CDT_FILES="intro.bas title.scn loader.bas 8BP0.bin"
+```
+
+1. **Intro** - Quick BASIC animation/message
+2. **Title screen** - Visual while loading
+3. **Loader** - Sets up memory and palette
+4. **Game binary** - Main game code
+
+### Simple Game Order
+
+```bash
+# Pattern: loader → code
+CDT_FILES="loader.bas 8BP0.bin"
+```
+
+1. **Loader** - Basic setup
+2. **Game** - Game code
+
+### Demo Order
+
+```bash
+# Pattern: screen → screen → code
+CDT_FILES="logo.scn title.scn demo.bin"
+```
+
+1. **Logo** - Company/group logo
+2. **Title** - Demo title
+3. **Demo** - Demo code
+
+## Advanced CDT Features
+
+### Multiple Programs
+
+CDT can contain completely separate programs:
+
+```bash
+CDT_FILES="game1.bas 8BP0.bin game2.bas 8BP1.bin"
+```
+
+User can load any program by positioning tape.
+
+### Data Files
+
+Include data files in sequence:
+
+```bash
+CDT_FILES="loader.bas 8BP0.bin levels.dat music.dat"
+```
+
+Load from BASIC:
+```basic
+100 OPENIN "levels.dat"
+110 INPUT#9, level$
+120 CLOSEIN
+```
+
+### Screens as Loaders
+
+Screens can auto-execute:
+
+```bash
+CDT_FILES="autoload.scn loader.bas 8BP0.bin"
+```
+
+## Troubleshooting
+
+### CDT Not Created
+
+**Check configuration:**
+```bash
+# Both must be set
+CDT="${PROJECT_NAME}.cdt"
+CDT_FILES="loader.bas 8BP0.bin"
+```
+
+**Check files exist:**
+```bash
+ls obj/loader.bas obj/8BP0.bin
+```
+
+### Files Not Loading
+
+**Wrong order:**
+- Loader must come before binaries
+- Screens before code that displays them
+
+**Missing map entry:**
+- Files must be in `${PROJECT_NAME}.map`
+- Build generates this automatically
+
+**Wrong file type:**
+- Check extension (.bas, .bin, .scn)
+- Verify type in map file
+
+### Tape Errors on CPC
+
+**"Read error":**
+- Try `|TAPE` first (664/6128)
+- Check emulator tape speed
+- Verify CDT file not corrupted
+
+**"File not found":**
+- CDT loads sequentially
+- Can't skip files
+- Must load in order
+
+## Manual CDT Operations
+
+```bash
+# View CDT catalog
+python3 ~/.DevCPC/tools/abasm/src/cdt.py dist/my-game.cdt --dir
+
+# Create empty CDT
+python3 ~/.DevCPC/tools/abasm/src/cdt.py --create custom.cdt
+
+# Add BASIC file
+python3 ~/.DevCPC/tools/abasm/src/cdt.py custom.cdt \
+  --put-ascii loader.bas --name "LOADER"
+
+# Add binary file
+python3 ~/.DevCPC/tools/abasm/src/cdt.py custom.cdt \
+  --put-bin game.bin --load-addr 0x4000 --start-addr 0x4000
+```
+
+## Best Practices
+
+1. **Order matters** - Plan loading sequence carefully
+2. **Test early** - Use `devcpc run --cdt` frequently
+3. **Keep it simple** - Fewer files = faster loading
+4. **Document order** - Comment CDT_FILES in config
+5. **Provide DSK too** - Give users both options
+
+## See Also
+
+- [Disk Images](/guides/disk-images) - DSK format
+- [Compiling Code](/guides/compiling-code) - How files are generated
+- [Emulator Integration](/guides/emulator-integration) - Testing CDT files
+- [Cartridge Images](/guides/cartridge-images) - CPR alternative

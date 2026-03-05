@@ -1,0 +1,363 @@
+---
+title: 'Build Levels'
+description: 'Understanding 8BP build levels and memory optimization for Amstrad CPC projects'
+icon: 'layer-group'
+---
+
+Build levels in DevCPC determine which 8BP library features are included in your compiled program. Choosing the right build level is crucial for optimizing memory usage and ensuring your game has enough BASIC memory available.
+
+## What Are Build Levels?
+
+The 8BP library for Amstrad CPC includes multiple features for game development: sprite handling, scrolling, layouts, pseudo-3D rendering, and more. Not all games need all features, so DevCPC allows you to select a **build level** that includes only what you need.
+
+<Info>
+  Higher build levels (4 = least features) free up more BASIC memory by excluding unused 8BP commands.
+</Info>
+
+## The 5 Build Levels
+
+<CardGroup cols={2}>
+  <Card title="Level 0: Full Featured" icon="star">
+    All 8BP functionality included. Use when you need everything or aren't sure yet.
+    
+    **Memory:** 23599 bytes  
+    **Size:** 19120 bytes
+  </Card>
+  
+  <Card title="Level 1: Maze Games" icon="table-cells">
+    Layout and collision features for maze-style games.
+    
+    **Memory:** 24999 bytes  
+    **Size:** 17620 bytes
+  </Card>
+  
+  <Card title="Level 2: Scrolling Games" icon="arrows-left-right">
+    Map-to-sprite and update features for scrolling games.
+    
+    **Memory:** 24799 bytes  
+    **Size:** 17820 bytes
+  </Card>
+  
+  <Card title="Level 3: Pseudo-3D Games" icon="cube">
+    3D rendering features for pseudo-3D games.
+    
+    **Memory:** 23999 bytes  
+    **Size:** 18620 bytes
+  </Card>
+  
+  <Card title="Level 4: Basic Features" icon="minimize">
+    Core sprite features only. Maximum memory available.
+    
+    **Memory:** 25299 bytes  
+    **Size:** 17320 bytes
+  </Card>
+</CardGroup>
+
+## Detailed Build Level Comparison
+
+<Tabs>
+  <Tab title="Features Table">
+    | Level | Description | MEMORY Value | Library Size | Available Commands |
+    |-------|-------------|--------------|--------------|-------------------|
+    | **0** | All functionalities | 23599 | 19120 bytes | `\|LAYOUT`, `\|COLAY`, `\|MAP2SP`, `\|UMA`, `\|3D` |
+    | **1** | Maze games | 24999 | 17620 bytes | `\|LAYOUT`, `\|COLAY` |
+    | **2** | Scrolling games | 24799 | 17820 bytes | `\|MAP2SP`, `\|UMA` |
+    | **3** | Pseudo-3D games | 23999 | 18620 bytes | `\|3D` |
+    | **4** | Basic (no scroll/layout) | 25299 | 17320 bytes | Core sprite commands only |
+  </Tab>
+  
+  <Tab title="Memory Breakdown">
+    ### Memory Distribution
+    
+    The `MEMORY` value defines the upper limit of BASIC's memory space:
+    
+    ```
+    CPC Memory Layout:
+    ┌──────────────────┐ &FFFF
+    │  System ROM      │
+    ├──────────────────┤
+    │  8BP Library     │ ← Size varies by BUILD_LEVEL
+    ├──────────────────┤ ← MEMORY value (23599-25299)
+    │  Your BASIC      │
+    │  Program         │
+    ├──────────────────┤
+    │  Screen Memory   │ &C000
+    ├──────────────────┤
+    │  Lower RAM       │
+    └──────────────────┘ &0000
+    ```
+    
+    **Example for Level 0:**
+    - MEMORY 23599 = `BASIC can use up to address 23599`
+    - 8BP library loads at 23600-42719 (19120 bytes)
+    
+    **Example for Level 4:**
+    - MEMORY 25299 = `BASIC can use up to address 25299`
+    - 8BP library loads at 25300-42619 (17320 bytes)
+    - **+1700 more bytes** for your BASIC program!
+  </Tab>
+  
+  <Tab title="Command Reference">
+    ### 8BP Commands by Level
+    
+    <AccordionGroup>
+      <Accordion title="Level 0: All Commands" icon="list">
+        Includes every 8BP command:
+        
+        - **Layout System:** `|LAYOUT`, `|COLAY`, collision detection
+        - **Map-to-Sprite:** `|MAP2SP`, automatic sprite generation from maps
+        - **Update Management:** `|UMA`, efficient sprite updates
+        - **Pseudo-3D:** `|3D`, 3D rendering routines
+        - **Core Sprites:** `|SETUPSP`, `|PRINTSP`, `|SPRITE`, etc.
+        - **Music & FX:** Sound and music commands
+      </Accordion>
+      
+      <Accordion title="Level 1: Maze Game Commands" icon="table-cells">
+        Optimized for grid-based games:
+        
+        - **`|LAYOUT`** - Define and manage tile-based layouts
+        - **`|COLAY`** - Collision detection with layout
+        - **Core sprite commands** - Basic sprite handling
+        
+        **Use for:** Pac-Man style games, tile-based puzzles, dungeon crawlers
+      </Accordion>
+      
+      <Accordion title="Level 2: Scrolling Commands" icon="arrows">
+        Optimized for scrolling games:
+        
+        - **`|MAP2SP`** - Convert map tiles to sprites dynamically
+        - **`|UMA`** - Update manager for efficient redraws
+        - **Core sprite commands** - Basic sprite handling
+        
+        **Use for:** Platformers, shoot 'em ups, side-scrollers
+      </Accordion>
+      
+      <Accordion title="Level 3: Pseudo-3D Commands" icon="cube">
+        Optimized for 3D games:
+        
+        - **`|3D`** - Pseudo-3D rendering routines
+        - **Core sprite commands** - Basic sprite handling
+        
+        **Use for:** Racing games, flight simulators, 3D maze games
+      </Accordion>
+      
+      <Accordion title="Level 4: Core Commands Only" icon="minimize">
+        Basic sprite functionality:
+        
+        - **`|SETUPSP`** - Initialize sprite system
+        - **`|PRINTSP`** - Print sprites
+        - **`|SPRITE`** - Define sprites
+        - **`|MOVE`** - Move sprites
+        - **Music commands** - Sound and music
+        
+        **Use for:** Simple arcade games, demos, music players
+        
+        **Does NOT include:** Layouts, maps, scrolling, or 3D
+      </Accordion>
+    </AccordionGroup>
+  </Tab>
+</Tabs>
+
+## How to Choose Your Build Level
+
+Use this decision tree to select the optimal build level:
+
+<Steps>
+  <Step title="Analyze Your Game Requirements">
+    List all the 8BP features your game needs:
+    - Tile-based layouts? → Consider Level 1
+    - Scrolling maps? → Consider Level 2  
+    - 3D graphics? → Consider Level 3
+    - Simple sprites only? → Consider Level 4
+    - Not sure yet? → Use Level 0
+  </Step>
+  
+  <Step title="Check Memory Requirements">
+    Estimate how much BASIC memory your game logic needs:
+    - Large BASIC programs → Choose higher build levels (more memory)
+    - Small BASIC, complex 8BP → Level 0 is fine
+  </Step>
+  
+  <Step title="Set BUILD_LEVEL in devcpc.conf">
+    ```bash
+    # Example: Scrolling platformer game
+    BUILD_LEVEL=2
+    ```
+  </Step>
+  
+  <Step title="Update MEMORY in Your BASIC Loader">
+    ```basic
+    10 REM Match MEMORY to your BUILD_LEVEL
+    20 MEMORY 24799  ' For BUILD_LEVEL=2
+    30 LOAD"8BP2.bin"
+    40 CALL &6B78
+    ```
+  </Step>
+</Steps>
+
+## Configuration Example
+
+### In devcpc.conf:
+
+```bash
+PROJECT_NAME="platformer"
+
+# Choose build level based on your needs
+BUILD_LEVEL=2
+
+# Rest of configuration...
+ASM_PATH="asm/make_all_platformer.asm"
+BASIC_PATH="bas"
+```
+
+### In Your BASIC Loader (bas/loader.bas):
+
+```basic
+10 REM Platformer Game Loader
+20 MODE 0
+30 MEMORY 24799: REM For BUILD_LEVEL 2
+40 LOAD"8BP2.bin"
+50 CALL &6B78
+60 REM Your game initialization here
+```
+
+<Warning>
+  The MEMORY value in your BASIC program **must match** the BUILD_LEVEL in `devcpc.conf`. Mismatches can cause crashes or memory corruption.
+</Warning>
+
+## Build Level Binary Names
+
+Each build level produces a uniquely named binary:
+
+| BUILD_LEVEL | Binary Name | Load From BASIC |
+|-------------|-------------|----------------|
+| 0 | `8BP0.bin` | `LOAD"8BP0.bin"` |
+| 1 | `8BP1.bin` | `LOAD"8BP1.bin"` |
+| 2 | `8BP2.bin` | `LOAD"8BP2.bin"` |
+| 3 | `8BP3.bin` | `LOAD"8BP3.bin"` |
+| 4 | `8BP4.bin` | `LOAD"8BP4.bin"` |
+
+<Note>
+  DevCPC automatically sets the `ASSEMBLING_OPTION` variable in your ASM file based on `BUILD_LEVEL`.
+</Note>
+
+## Switching Build Levels
+
+You can change build levels at any time:
+
+```bash
+# 1. Edit devcpc.conf
+BUILD_LEVEL=4  # Change to level 4
+
+# 2. Update your BASIC loader
+# Change MEMORY and binary name to match
+
+# 3. Clean and rebuild
+devcpc clean
+devcpc build
+```
+
+## Memory Limit Verification
+
+During build, DevCPC automatically checks:
+
+<AccordionGroup>
+  <Accordion title="Graphics Memory Limit" icon="image">
+    **Limit:** `_END_GRAPH < 42040`
+    
+    Ensures sprite and graphics data don't overflow into system memory.
+    
+    ```
+    ✓ Graphics limit respected (40152 < 42040)
+    ```
+  </Accordion>
+  
+  <Accordion title="C Code Memory Limit" icon="c">
+    **Limit:** `C_CODE_LOC + size < 23999`
+    
+    Ensures C code doesn't overwrite the 8BP library.
+    
+    ```
+    ✓ C code memory OK (20000 + 3500 = 23500 < 23999)
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Build Output Messages
+
+When you run `devcpc build`, you'll see:
+
+```
+═══════════════════════════════════════
+  Compilar Proyecto: my_game
+═══════════════════════════════════════
+
+ℹ Build Level: 2 (Juegos con scroll)
+ℹ Memoria BASIC: MEMORY 24799
+
+✓ Compilación exitosa
+✓ Límite de gráficos respetado (< 42040)
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Start with Level 0" icon="1">
+    Begin development with Level 0 to access all features, then optimize later.
+  </Card>
+  
+  <Card title="Match MEMORY Values" icon="2">
+    Always ensure your BASIC MEMORY statement matches the build level.
+  </Card>
+  
+  <Card title="Test After Switching" icon="3">
+    Run `devcpc validate` and test thoroughly when changing build levels.
+  </Card>
+  
+  <Card title="Document Your Choice" icon="4">
+    Add comments in `devcpc.conf` explaining why you chose a specific level.
+  </Card>
+</CardGroup>
+
+## Common Issues
+
+<AccordionGroup>
+  <Accordion title="Error: Command not found (|MAP2SP)" icon="circle-exclamation">
+    **Problem:** Your code uses a command not available in your build level.
+    
+    **Solution:** Either:
+    - Change to Level 0 or Level 2 (includes `|MAP2SP`)
+    - Remove the unsupported command from your code
+  </Accordion>
+  
+  <Accordion title="Program crashes on load" icon="circle-exclamation">
+    **Problem:** MEMORY value doesn't match BUILD_LEVEL.
+    
+    **Solution:** Check your BASIC loader:
+    ```basic
+    ' BUILD_LEVEL=2 requires:
+    MEMORY 24799
+    LOAD"8BP2.bin"
+    ```
+  </Accordion>
+  
+  <Accordion title="Not enough BASIC memory" icon="circle-exclamation">
+    **Problem:** Large BASIC program hitting memory limits.
+    
+    **Solution:** Use a higher build level:
+    - Level 0 (23599) → Level 4 (25299) = +1700 bytes
+    - Remove unused 8BP features
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Configuration Guide" icon="gear" href="/concepts/configuration">
+    Learn how to configure BUILD_LEVEL and other settings
+  </Card>
+  
+  <Card title="Project Structure" icon="folder-tree" href="/concepts/project-structure">
+    Understand where build outputs are stored
+  </Card>
+</CardGroup>

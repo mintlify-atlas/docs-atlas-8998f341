@@ -1,0 +1,306 @@
+---
+title: "8BP Game Project"
+description: "Complete example of an 8bits de Poder game project with graphics, music, and code"
+---
+
+This example demonstrates a complete 8BP (8bits de Poder) game project with all components: assembly code, BASIC loader, graphics, music, and C integration.
+
+## Project Structure
+
+```
+8bp/
+├── devcpc.conf              # Project configuration
+├── src/
+│   ├── asm/                 # Assembly source files
+│   │   ├── make_all_mygame.asm     # Main entry point
+│   │   ├── make_codigo_mygame.asm  # 8BP library + code
+│   │   ├── make_musica_mygame.asm  # Music includes
+│   │   ├── make_graficos_mygame.asm # Graphics data
+│   │   ├── images_mygame.asm       # Sprite definitions
+│   │   ├── sprites_table_mygame.asm # Sprite table
+│   │   └── player_loader_cpc_v42.asm # WYZ music player
+│   ├── basic/               # BASIC files
+│   │   ├── loader.bas       # Game loader
+│   │   ├── loader2.bas      # Alternative loader
+│   │   └── test.bas         # Test program
+│   ├── c/                   # C source code (optional)
+│   │   ├── ciclo.c          # C game logic
+│   │   ├── 8BP_wrapper/     # C wrapper for 8BP
+│   │   │   └── 8BP.h
+│   │   └── mini_BASIC/      # Mini BASIC header
+│   │       └── minibasic.h
+│   └── music/               # Music files
+│       ├── tecno001.wyz     # WYZ tracker file
+│       ├── tecno001.mus     # Music data
+│       ├── stars3_v2.wyz
+│       ├── stars3_v2.mus
+│       └── instrumentos.ins # Instrument definitions
+├── assets/
+│   ├── sprites/             # Sprite PNG files
+│   │   ├── sprite.png
+│   │   └── logo.png
+│   └── screen/              # Loading screens
+│       └── dev8bp.png
+├── obj/                     # Generated: binaries and intermediate files
+└── dist/                    # Generated: DSK, CDT, CPR
+```
+
+## Configuration (devcpc.conf)
+
+```bash
+# Project name
+PROJECT_NAME="8bp"
+
+# Build level - all 8BP features
+BUILD_LEVEL=0
+
+# Source paths
+ASM_PATH="src/asm/make_all_mygame.asm"
+BASIC_PATH="src/basic"
+C_PATH="src/c"
+C_SOURCE="ciclo.c"
+C_CODE_LOC=20000
+
+# Graphics conversion
+MODE=0
+SPRITES_PATH="assets/sprites"
+SPRITES_OUT_FILE="src/asm/sprites.asm"
+LOADER_SCREEN="assets/screen"
+
+# Output
+OBJ_DIR="obj"
+DIST_DIR="dist"
+DSK="${PROJECT_NAME}.dsk"
+CDT="${PROJECT_NAME}.cdt"
+CDT_FILES="loader.bas"
+
+# Emulator configuration
+RUN_MODE="dsk"
+RVM_PATH="/Applications/Retro Virtual Machine 2.app/Contents/MacOS/Retro Virtual Machine 2"
+CPC_MODEL=6128
+RUN_FILE="loader.bas"
+```
+
+## Main Assembly File (make_all_mygame.asm)
+
+```asm
+; Main makefile for 8BP games
+; Controls which 8BP features are included
+
+; ASSEMBLING_OPTION:
+; 0 = All features (MEMORY 23599, 19120 bytes)
+; 1 = Maze games only (MEMORY 24999, 17620 bytes)
+; 2 = Scroll games only (MEMORY 24799, 17820 bytes)
+; 3 = Pseudo-3D only (MEMORY 23999, 18620 bytes)
+; 4 = Basic features only (MEMORY 25299, 17320 bytes)
+
+let ASSEMBLING_OPTION = 0
+
+; Include 8BP library and game code
+read "make_codigo_mygame.asm"
+
+; Include music
+read "make_musica_mygame.asm"
+
+; Include graphics
+read "make_graficos_mygame.asm"
+
+; Save binary based on build level
+if ASSEMBLING_OPTION = 0
+SAVE "8BP0.bin",23600,19120
+elseif ASSEMBLING_OPTION = 1
+SAVE "8BP1.bin",25000,17620
+elseif ASSEMBLING_OPTION = 2
+SAVE "8BP2.bin",24800,17820
+elseif ASSEMBLING_OPTION = 3
+SAVE "8BP3.bin",24000,18620
+elseif ASSEMBLING_OPTION = 4
+SAVE "8BP4.bin",25300,17320
+endif
+```
+
+## BASIC Loader (loader.bas)
+
+```basic
+10 MEMORY 23599
+20 LOAD"8BP0.bin"
+30 CALL &6B78
+32 MODE 0
+33 BORDER 0
+34 INK 0,0: INK 1,24: INK 2,3
+40 DEFINT A-Z : REM variables numericas enteras (mas rápidas)
+50 |SETUPSP,31,9,17: REM asigna la imagen 16 al sprite 31
+60 x=40:y=100: REM coordenadas donde queremos imprimir
+70 |LOCATESP,31,y,x: REM coloca el sprite 31
+80 |PRINTSP,31: REM imprime el sprite 31
+```
+
+### Loader Explanation
+
+- **Line 10**: Set MEMORY limit to 23599 (BUILD_LEVEL 0 requires this)
+- **Line 20-30**: Load and initialize 8BP library
+- **Line 32-34**: Configure screen mode and colors
+- **Line 40**: Use integer variables for speed
+- **Line 50**: Setup sprite 31 with image 16 and 9 frames
+- **Line 60-80**: Position and display sprite
+
+## C Integration Example (ciclo.c)
+
+```c
+#include <stdlib.h>
+#include "8BP.h"
+#include "minibasic.h"
+
+char _xmap;
+int x, x2;
+
+int main()
+{
+    x = 0;
+    for (_xmap = 2; _xmap < 32; _xmap += 2) {
+        x = 0;
+        x2 = 2;
+        
+        // Set sprite limits
+        _8BP_setlimits_4(0, 2, 0, 199);
+        
+        // Map to sprite
+        _8BP_map2sp_2(0, 30 + _xmap);
+        
+        // Hardware scroll using inline assembly
+        __asm
+            push hl
+            push af
+            ld hl, #__xmap
+            ld a,(hl)
+            ld l,a
+            xor a
+            ld H,a
+            call 48133
+            pop af
+            pop hl
+        __endasm;
+        
+        // Print all sprites
+        _8BP_printspall();
+    }
+    
+    return 0;
+}
+```
+
+## Build and Run
+
+### Build the Project
+
+```bash
+# Navigate to project directory
+cd 8bp
+
+# Build everything
+devcpc build
+```
+
+The build process:
+1. Converts PNG sprites to ASM format
+2. Converts PNG loading screens to SCN format
+3. Compiles assembly code with ABASM
+4. Compiles C code with SDCC (if configured)
+5. Creates DSK image with all files
+6. Creates CDT tape image (if configured)
+
+### Run in Emulator
+
+```bash
+# Run with configured emulator
+devcpc run
+
+# Or force DSK mode
+devcpc run --dsk
+
+# Or force CDT mode
+devcpc run --cdt
+```
+
+## Expected Output
+
+```
+═══════════════════════════════════════
+  Compilar Proyecto: 8bp
+═══════════════════════════════════════
+
+ℹ Build Level: 0 (Todas las funcionalidades)
+ℹ Memoria BASIC: MEMORY 23599
+
+✓ Sprites convertidos exitosamente
+✓ Pantallas convertidas exitosamente
+✓ Compilación ASM exitosa
+✓ Compilación C exitosa
+✓ DSK creado
+✓ CDT creado
+
+Contenido del DSK:
+0: 8BP0    .BIN  [ st: 0 extend: 0 data pages: 128 ]
+1: LOADER  .BAS  [ st: 0 extend: 0 data pages: 3 ]
+2: LOADER2 .BAS  [ st: 0 extend: 0 data pages: 2 ]
+3: CICLO   .BIN  [ st: 0 extend: 0 data pages: 8 ]
+4: DEV8BP  .SCN  [ st: 0 extend: 0 data pages: 128 ]
+
+✓ Proyecto compilado exitosamente
+```
+
+## Key Features Demonstrated
+
+### 8BP Library Integration
+- Complete 8BP library with all commands (BUILD_LEVEL 0)
+- Sprite management with |SETUPSP, |LOCATESP, |PRINTSP
+- Map-to-sprite conversion with |MAP2SP
+- Hardware scrolling support
+
+### Music Support
+- WYZ Tracker integration
+- Multiple music tracks (.wyz, .mus files)
+- Sound effects with percusiones.fx
+- WYZ player v4.2 for CPC
+
+### Graphics Pipeline
+- Automatic PNG to ASM sprite conversion
+- Automatic PNG to SCN screen conversion
+- Mode 0 support (160x200, 16 colors)
+- Sprite tables and animation sequences
+
+### C Programming
+- SDCC compiler integration
+- 8BP wrapper for C functions
+- Inline Z80 assembly in C code
+- Mini BASIC compatibility layer
+
+## Memory Map
+
+```
+&0000 - &3FFF  ROM (16KB)
+&4000 - &5BFF  Screen memory (8KB)
+&5C00 - &5DBF  8BP binary loads here (BUILD_LEVEL 0)
+&5DC0 - &9FFF  Free for game code/data
+&A000 - &C000  More free space
+&C000 - &FFFF  Screen memory + system
+
+MEMORY 23599 = &5C2F
+8BP0.bin size: 19120 bytes
+End address: 23599 + 19120 = 42719 = &A6FF
+```
+
+## Next Steps
+
+1. **Customize Graphics**: Replace PNG files in `assets/sprites/` and `assets/screen/`
+2. **Add Music**: Create or import .wyz files to `src/music/`
+3. **Modify Game Logic**: Edit ASM files or C code
+4. **Adjust Build Level**: Change BUILD_LEVEL if you don't need all 8BP features
+5. **Test on Real Hardware**: Use the generated DSK or CDT files
+
+## Related
+
+- [ASM Project Example](/examples/asm-project) - Pure assembly without 8BP
+- [BASIC Program Example](/examples/basic-program) - BASIC-only project
+- [Multi-File Projects](/recipes/multi-file-projects) - Organizing large projects
+- [Music & Sound](/recipes/music-sound) - Music integration details

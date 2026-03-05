@@ -1,0 +1,656 @@
+---
+title: "Loading Screens"
+description: "Creating and using loading screens from PNG images"
+---
+
+Learn how to create stunning loading screens for your Amstrad CPC games using PNG images that are automatically converted to the native SCN format.
+
+## Overview
+
+Loading screens are full-screen images displayed while your game loads. DevCPC automatically converts PNG images to SCN (screen) format and adds them to your DSK image.
+
+## Quick Start
+
+### 1. Create Your PNG
+
+Create a PNG image with the correct resolution for your chosen mode:
+
+- **Mode 0**: 160x200 pixels, 16 colors
+- **Mode 1**: 320x200 pixels, 4 colors  
+- **Mode 2**: 640x200 pixels, 2 colors
+
+### 2. Configure devcpc.conf
+
+```bash
+# Set CPC mode
+MODE=0
+
+# Specify screen directory
+LOADER_SCREEN="assets/screen"
+```
+
+### 3. Place PNG Files
+
+```bash
+mkdir -p assets/screen
+cp title.png assets/screen/
+```
+
+### 4. Build Project
+
+```bash
+devcpc build
+```
+
+The build process:
+1. Finds all PNG files in `assets/screen/`
+2. Converts each to SCN format
+3. Saves to `obj/` directory
+4. Adds to DSK automatically
+5. Creates `.info` files with palette data
+
+## Screen Modes
+
+### Mode 0: 160x200, 16 Colors
+
+**Best for**: Colorful graphics, logos, detailed images
+
+```bash
+MODE=0
+```
+
+**PNG requirements**:
+- Resolution: 160x200 pixels exactly
+- Maximum colors: 16 from CPC palette
+- Each pixel = 2 bytes in video memory
+
+**Use case**:
+```basic
+10 MODE 0
+20 LOAD"TITLE.SCN",&C000
+30 REM Full color title screen
+```
+
+### Mode 1: 320x200, 4 Colors
+
+**Best for**: Sharp text, clean graphics, retro aesthetic
+
+```bash
+MODE=1
+```
+
+**PNG requirements**:
+- Resolution: 320x200 pixels exactly
+- Maximum colors: 4 from CPC palette
+- Higher resolution, fewer colors
+
+**Use case**:
+```basic
+10 MODE 1
+20 LOAD"LOGO.SCN",&C000
+30 REM Sharp company logo
+```
+
+### Mode 2: 640x200, 2 Colors
+
+**Best for**: Text adventures, high-res graphics, monochrome art
+
+```bash
+MODE=2
+```
+
+**PNG requirements**:
+- Resolution: 640x200 pixels exactly
+- Maximum colors: 2 from CPC palette
+- Highest resolution
+
+**Use case**:
+```basic
+10 MODE 2
+20 LOAD"TEXT.SCN",&C000
+30 REM High resolution text screen
+```
+
+## CPC Color Palette
+
+Use these RGB values in your image editor:
+
+```
+INK 0  = Black         (0,0,0)
+INK 1  = Blue          (0,0,128)
+INK 2  = Bright Blue   (0,0,255)
+INK 3  = Red           (128,0,0)
+INK 4  = Magenta       (128,0,128)
+INK 5  = Mauve         (128,0,255)
+INK 6  = Bright Red    (255,0,0)
+INK 7  = Purple        (255,0,128)
+INK 8  = Bright Magenta(255,0,255)
+INK 9  = Green         (0,128,0)
+INK 10 = Cyan          (0,128,128)
+INK 11 = Sky Blue      (0,128,255)
+INK 12 = Yellow        (128,128,0)
+INK 13 = Gray          (128,128,128)
+INK 14 = Pastel Blue   (128,128,255)
+INK 15 = Orange        (255,128,0)
+INK 16 = Pink          (255,128,128)
+INK 17 = Pastel Magenta(255,128,255)
+INK 18 = Bright Green  (0,255,0)
+INK 19 = Sea Green     (0,255,128)
+INK 20 = Bright Cyan   (0,255,255)
+INK 21 = Lime          (128,255,0)
+INK 22 = Pastel Green  (128,255,128)
+INK 23 = Pastel Cyan   (128,255,255)
+INK 24 = Bright Yellow (255,255,0)
+INK 25 = Pastel Yellow (255,255,128)
+INK 26 = White         (255,255,255)
+```
+
+## Creating PNG in GIMP
+
+### Step 1: New Image
+
+1. **File** → **New**
+2. **Width**: 160 (Mode 0) or 320 (Mode 1) or 640 (Mode 2)
+3. **Height**: 200
+4. **Advanced Options** → **Fill with**: Transparency or Background color
+
+### Step 2: Set Up Palette
+
+1. **Windows** → **Dockable Dialogs** → **Palettes**
+2. Create "CPC Palette" with colors from table above
+3. **Image** → **Mode** → **Indexed**
+4. Use custom palette with max colors for your mode
+
+### Step 3: Create Artwork
+
+- Use pencil tool for pixel-perfect control
+- Zoom in (400% or more) for detail work
+- Use only palette colors
+- Check color count: **Image** → **Mode** → **Indexed** → **Colormap**
+
+### Step 4: Export
+
+1. **File** → **Export As**
+2. Choose PNG format
+3. **Export** → Accept defaults
+
+## Build Output
+
+When you run `devcpc build`, you'll see:
+
+```
+═══════════════════════════════════════
+  Convertir Pantallas de Carga
+═══════════════════════════════════════
+
+ℹ Ruta:  assets/screen
+ℹ Modo:  0 (160x200, 16 colores)
+
+→ Convirtiendo title.png...
+✓ title.scn generado (16384 bytes)
+ℹ Paleta: 12 colores detectados
+
+→ Convirtiendo loading.png...
+✓ loading.scn generado (16384 bytes)
+ℹ Paleta: 8 colores detectados
+
+✓ 2 pantalla(s) convertida(s)
+
+→ Añadiendo pantallas al DSK...
+✓ title.scn añadido
+✓ loading.scn añadido
+```
+
+### Generated Files
+
+```
+obj/
+├── title.scn           # 16384 byte screen data
+├── title.scn.info      # Palette information
+├── loading.scn
+└── loading.scn.info
+```
+
+## Palette Info File (.scn.info)
+
+Each screen generates an `.info` file:
+
+```
+FILE: title.scn
+WIDTH: 160
+HEIGHT: 200
+MODE: 0
+PALETTE COLORS: 8
+
+FW              HW              RGB
+0               0x14    (0, 0, 0)
+24              0x0A    (255, 255, 0)
+6               0x04    (255, 0, 0)
+1               0x02    (0, 0, 128)
+18              0x12    (0, 255, 0)
+11              0x0B    (0, 128, 255)
+26              0x1A    (255, 255, 255)
+13              0x0D    (128, 128, 128)
+
+; ASM HW palette
+db 0x14, 0x0A, 0x04, 0x02, 0x12, 0x0B, 0x1A, 0x0D
+
+' BASIC palette
+INK 0,0: INK 1,24: INK 2,6: INK 3,1: INK 4,18: INK 5,11: INK 6,26: INK 7,13
+
+// C palette
+hwpal = { 0x14, 0x0A, 0x04, 0x02, 0x12, 0x0B, 0x1A, 0x0D }
+```
+
+Use this to set the correct palette when loading the screen.
+
+## Loading Screens in BASIC
+
+### Simple Loading Screen
+
+```basic
+10 REM Load title screen
+20 MODE 0
+30 LOAD"TITLE.SCN",&C000
+40 REM Set palette from .info file
+50 INK 0,0: INK 1,24: INK 2,6: INK 3,1
+60 INK 4,18: INK 5,11: INK 6,26: INK 7,13
+70 REM Wait 3 seconds
+80 FOR i=1 TO 150: NEXT i
+90 REM Continue loading
+100 LOAD"8BP0.BIN"
+```
+
+### With Border
+
+```basic
+10 MODE 0
+20 BORDER 0
+30 LOAD"TITLE.SCN",&C000
+40 INK 0,0: INK 1,24: INK 2,6
+```
+
+### Animated Loading Message
+
+```basic
+10 MODE 0
+20 LOAD"TITLE.SCN",&C000
+30 INK 0,0: INK 1,24: INK 2,6
+40 FOR i=1 TO 3
+50   LOCATE 10,20: PRINT "LOADING";
+60   FOR j=1 TO 20: NEXT j
+70   LOCATE 10,20: PRINT "LOADING.";
+80   FOR j=1 TO 20: NEXT j
+90   LOCATE 10,20: PRINT "LOADING..";
+100  FOR j=1 TO 20: NEXT j
+110  LOCATE 10,20: PRINT "LOADING...";
+120  FOR j=1 TO 20: NEXT j
+130 NEXT i
+140 LOAD"8BP0.BIN"
+```
+
+### Multiple Screens
+
+```basic
+10 REM Title screen
+20 MODE 0
+30 BORDER 0
+40 LOAD"TITLE.SCN",&C000
+50 INK 0,0: INK 1,24: INK 2,6
+60 LOCATE 12,22: PRINT "PRESS ANY KEY"
+70 CALL &BB18: REM Wait for key
+80 REM Loading screen
+90 LOAD"LOADING.SCN",&C000
+100 INK 0,0: INK 1,1: INK 2,18
+110 LOCATE 10,20: PRINT "LOADING GAME..."
+120 REM Load game
+130 LOAD"8BP0.BIN"
+140 CALL &6B78
+```
+
+## Loading Screens from Assembly
+
+### Direct Load
+
+```asm
+; Load screen to video memory
+ld hl, screen_data
+ld de, &C000
+ld bc, 16384
+ldir
+
+screen_data:
+    incbin "title.scn"
+```
+
+### With Palette Setup
+
+```asm
+; Set mode 0
+ld a, 0
+call &BC0E          ; SCR SET MODE
+
+; Set border
+ld b, 0
+ld c, 0
+call &BC38          ; SCR SET BORDER
+
+; Load screen
+ld hl, title_scn
+ld de, &C000
+ld bc, 16384
+ldir
+
+; Set palette (from .info file)
+ld hl, palette
+ld b, 8             ; 8 colors
+ld c, 0             ; Start with PEN 0
+set_pal_loop:
+    ld a, c
+    push bc
+    push hl
+    ld b, a         ; PEN number
+    ld a, (hl)      ; Hardware color
+    ld c, a
+    call &BC32      ; SCR SET INK
+    pop hl
+    pop bc
+    inc hl
+    inc c
+    djnz set_pal_loop
+
+title_scn:
+    incbin "title.scn"
+
+palette:
+    db 0x14, 0x0A, 0x04, 0x02, 0x12, 0x0B, 0x1A, 0x0D
+```
+
+### Fast Decrunch (Compressed Screens)
+
+For larger projects, compress screens:
+
+```asm
+; Decompress screen (example using Exomizer)
+ld hl, compressed_screen
+ld de, &C000
+call exo_decrunch
+
+compressed_screen:
+    incbin "title.scn.exo"
+
+; Include exomizer decrunch routine
+include "exomizer.asm"
+```
+
+## Loading Screens from Tape (CDT)
+
+### Configuration
+
+```bash
+# devcpc.conf
+CDT="${PROJECT_NAME}.cdt"
+CDT_FILES="title.scn loader.bas 8BP0.bin"
+```
+
+### Order Matters
+
+```
+File order on tape:
+1. title.scn    - Screen loads first
+2. loader.bas   - BASIC program
+3. 8BP0.bin     - Game binary
+```
+
+### Loading from Tape
+
+```basic
+10 REM Load from tape
+20 MODE 0
+30 LOAD"TITLE.SCN",&C000
+40 INK 0,0: INK 1,24
+50 REM Screen now visible while rest loads
+60 LOAD"8BP0.BIN"
+70 CALL &6B78
+```
+
+On CPC:
+```
+RUN"
+```
+
+## Advanced Techniques
+
+### Fade In Effect
+
+```basic
+10 MODE 0
+20 LOAD"TITLE.SCN",&C000
+30 REM Fade in from black
+40 FOR i=0 TO 7
+50   INK 0,0: INK 1,i*3: INK 2,i*3+1: INK 3,i*3+2
+60   FOR j=1 TO 10: NEXT j
+70 NEXT i
+80 REM Final palette
+90 INK 0,0: INK 1,24: INK 2,6: INK 3,1
+```
+
+### Scanline Effect
+
+```asm
+; Draw screen with scanline effect
+ld hl, screen_data
+ld de, &C000
+ld b, 200           ; 200 lines
+load_line_loop:
+    push bc
+    
+    ; Copy one line (80 bytes in Mode 0)
+    ld bc, 80
+    ldir
+    
+    ; Wait for scanline
+    call wait_scanline
+    
+    pop bc
+    djnz load_line_loop
+
+wait_scanline:
+    ld b, 10
+wait_loop:
+    djnz wait_loop
+    ret
+```
+
+### Screen Transition
+
+```basic
+10 REM Wipe transition between screens
+20 MODE 0
+30 LOAD"SCREEN1.SCN",&C000
+40 CALL &BB18: REM Wait for key
+50 REM Wipe from bottom to top
+60 FOR y=199 TO 0 STEP -4
+70   LOAD"SCREEN2.SCN",&C000+y*80
+80 NEXT y
+```
+
+## Memory Considerations
+
+### Screen Memory Layout
+
+```
+Mode 0 (160x200, 16 colors):
+  &C000 - &FFFF = 16KB video memory
+  SCN file = 16384 bytes (full screen)
+
+Mode 1 (320x200, 4 colors):
+  &C000 - &FFFF = 16KB video memory
+  SCN file = 16384 bytes (full screen)
+
+Mode 2 (640x200, 2 colors):
+  &C000 - &FFFF = 16KB video memory
+  SCN file = 16384 bytes (full screen)
+```
+
+All modes use the same size because they use the full video memory space.
+
+### Loading Multiple Screens
+
+If you have many screens, consider:
+
+1. **Compression**: Use Exomizer or similar
+2. **Streaming**: Load screens on-demand
+3. **Partial Updates**: Only update changed areas
+
+## Troubleshooting
+
+### Screen Not Displaying
+
+**Problem**: Black screen after LOAD
+
+**Solutions**:
+- Ensure MODE is set before LOAD
+- Check load address is &C000
+- Verify PNG dimensions match mode
+- Set palette with INK commands
+
+### Wrong Colors
+
+**Problem**: Colors don't match PNG
+
+**Solutions**:
+- Copy palette from .scn.info file
+- Set INK colors AFTER MODE command
+- Use exact CPC RGB values in PNG
+
+### PNG Conversion Fails
+
+**Problem**: "Color not in CPC palette"
+
+**Solutions**:
+- Use only CPC palette colors
+- Install Pillow: `pip3 install Pillow`
+- Reduce colors in image editor
+- Use indexed color mode
+
+### File Too Large
+
+**Problem**: DSK is full
+
+**Solutions**:
+- Remove unused screens
+- Use compression
+- Create multiple DSK images
+- Use CDT (tape) for more space
+
+## Best Practices
+
+### 1. Optimize File Count
+
+```bash
+# Only include essential screens
+assets/screen/
+├── title.png      # Title/menu
+├── loading.png    # Loading indicator
+└── gameover.png   # Game over
+```
+
+### 2. Name Files Clearly
+
+```bash
+# Good naming
+title.png
+loading.png
+level1.png
+credits.png
+
+# Avoid
+screen1.png
+img2.png
+test.png
+```
+
+### 3. Test on Real Hardware
+
+- Colors may look different on CRT
+- Test brightness levels
+- Check border colors
+- Verify timing
+
+### 4. Provide Feedback
+
+```basic
+10 MODE 0
+20 LOAD"TITLE.SCN",&C000
+30 PRINT "LOADING GAME"
+40 LOAD"8BP0.BIN"
+50 PRINT "DONE!"
+```
+
+## Complete Example
+
+### Project Structure
+
+```
+my-game/
+├── devcpc.conf
+├── src/
+│   └── loader.bas
+└── assets/
+    └── screen/
+        ├── title.png       # 160x200, 16 colors
+        ├── loading.png     # 160x200, 8 colors
+        └── credits.png    # 160x200, 4 colors
+```
+
+### devcpc.conf
+
+```bash
+PROJECT_NAME="my_game"
+BUILD_LEVEL=0
+ASM_PATH="src/asm/make_all_mygame.asm"
+BASIC_PATH="src"
+MODE=0
+LOADER_SCREEN="assets/screen"
+DSK="${PROJECT_NAME}.dsk"
+```
+
+### loader.bas
+
+```basic
+10 REM Title Screen
+20 MODE 0: BORDER 0
+30 LOAD"TITLE.SCN",&C000
+40 INK 0,0: INK 1,24: INK 2,6: INK 3,1: INK 4,18
+50 LOCATE 15,22: PRINT "PRESS SPACE"
+60 IF INKEY(47)<>0 THEN GOTO 60
+70 REM Loading Screen
+80 LOAD"LOADING.SCN",&C000
+90 INK 0,0: INK 1,1: INK 2,11
+100 LOCATE 12,20: PRINT "LOADING..."
+110 MEMORY 23599
+120 LOAD"8BP0.BIN"
+130 CALL &6B78
+140 REM Game runs...
+150 REM Credits
+160 MODE 0: BORDER 0
+170 LOAD"CREDITS.SCN",&C000
+180 INK 0,0: INK 1,26
+190 LOCATE 15,24: PRINT "THE END"
+200 CALL &BB18
+```
+
+### Build and Test
+
+```bash
+devcpc build
+devcpc run
+```
+
+## Related
+
+- [BASIC Program Example](/examples/basic-program) - Complete BASIC project
+- [8BP Game Example](/examples/8bp-game) - Game with loading screens
+- [Sprite Animation](/recipes/sprite-animation) - Creating sprites
+- [Multi-File Projects](/recipes/multi-file-projects) - Organizing assets

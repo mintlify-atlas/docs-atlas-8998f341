@@ -1,0 +1,265 @@
+---
+title: 'devcpc info'
+description: 'Display project configuration and settings'
+icon: 'circle-info'
+---
+
+## Overview
+
+The `devcpc info` command displays detailed information about your project configuration, including active paths, build settings, output directories, and emulator configuration.
+
+## Syntax
+
+```bash
+devcpc info
+```
+
+## Output Example
+
+```
+═══════════════════════════════════════
+  Configuración del Proyecto
+═══════════════════════════════════════
+
+Proyecto:        mi-juego
+Build Level:     0
+
+Rutas configuradas:
+  ✓ ASM:    asm/make_all_mygame.asm
+  ✓ BASIC:  bas
+  ✓ RAW:    raw
+  ✓ C:      c (ciclo.c @ 20000)
+
+Conversión de Gráficos:
+  ✓ Sprites: assets/sprites → asm/sprites.asm (Modo 0)
+  ✓ Pantallas: assets/screen (Modo 0)
+
+Directorios:
+  Objetos:  obj
+  Salida:   dist
+  DSK:      mi-juego.dsk
+  CDT:      mi-juego.cdt
+  CPR:      mi-juego.cpr
+
+Emulador:
+  RVM:      /Applications/Retro Virtual Machine 2.app/Contents/MacOS/Retro Virtual Machine 2
+  Modelo:   464
+  Ejecutar: 8BP0.BIN
+  Modo:     auto
+```
+
+## Information Sections
+
+### Project Information
+
+```
+Proyecto:        mi-juego
+Build Level:     0
+```
+
+Displays:
+- **Project name** from `PROJECT_NAME`
+- **Build level** (if 8BP project) with description
+
+### Build Level Descriptions
+
+| Level | Description |
+|-------|-------------|
+| 0 | Todas las funcionalidades |
+| 1 | Juegos de laberintos |
+| 2 | Juegos con scroll |
+| 3 | Juegos pseudo-3D |
+| 4 | Sin scroll/layout |
+
+### Configured Paths
+
+```
+Rutas configuradas:
+  ✓ ASM:    asm/make_all_mygame.asm
+  ✓ BASIC:  bas
+  ✓ RAW:    raw
+  ✓ C:      c (ciclo.c @ 20000)
+```
+
+Shows which paths are active:
+- **ASM:** Assembler source file or directory
+- **BASIC:** Directory with `.bas` files
+- **RAW:** Raw binary files directory
+- **C:** C source directory with source file and load address
+
+Only shows paths that are configured (not commented out).
+
+### Graphics Conversion
+
+```
+Conversión de Gráficos:
+  ✓ Sprites: assets/sprites → asm/sprites.asm (Modo 0)
+  ✓ Pantallas: assets/screen (Modo 0)
+```
+
+Displays:
+- **Sprites:** Source path → Output file (CPC Mode)
+- **Pantallas:** Screen loading path (CPC Mode)
+
+Shows CPC mode:
+- **Modo 0:** 16 colors (160x200)
+- **Modo 1:** 4 colors (320x200)
+- **Modo 2:** 2 colors (640x200)
+
+### Output Directories
+
+```
+Directorios:
+  Objetos:  obj
+  Salida:   dist
+  DSK:      mi-juego.dsk
+  CDT:      mi-juego.cdt
+  CPR:      mi-juego.cpr
+```
+
+Shows:
+- **Objetos:** Intermediate files directory
+- **Salida:** Final output directory
+- **DSK:** Disk image name
+- **CDT:** Tape image name (if configured)
+- **CPR:** Cartridge ROM name (if configured)
+
+### Emulator Configuration
+
+```
+Emulador:
+  RVM:      /Applications/Retro Virtual Machine 2.app/Contents/MacOS/Retro Virtual Machine 2
+  Modelo:   464
+  Ejecutar: 8BP0.BIN
+  Modo:     auto
+```
+
+Displays:
+- **RVM:** Path to RetroVirtualMachine
+- **Modelo:** CPC model (464, 664, or 6128)
+- **Ejecutar:** File to auto-execute (DSK mode)
+- **Modo:** Run mode (auto, dsk, or cdt)
+
+Only shows if `RVM_PATH` is configured.
+
+## Use Cases
+
+### Verify Configuration
+
+After creating or modifying `devcpc.conf`:
+
+```bash
+vim devcpc.conf
+devcpc info
+```
+
+### Check Active Features
+
+See which features are enabled:
+
+```bash
+devcpc info | grep "✓"
+```
+
+### Debugging
+
+When troubleshooting, verify paths are correct:
+
+```bash
+devcpc info
+devcpc validate
+```
+
+### Documentation
+
+Capture project configuration for documentation:
+
+```bash
+devcpc info > PROJECT_CONFIG.txt
+```
+
+### Pre-Build Check
+
+Verify settings before building:
+
+```bash
+devcpc info
+devcpc build
+```
+
+## Configuration Variables
+
+The command reads from `devcpc.conf`:
+
+### Required Variables
+
+- `PROJECT_NAME` - Project identifier
+
+### Optional Variables (8BP)
+
+- `BUILD_LEVEL` - 8BP feature level (0-4)
+- `ASM_PATH` - Assembler source
+- `BASIC_PATH` - BASIC files directory
+- `RAW_PATH` - Raw files directory
+- `C_PATH` - C source directory
+- `C_SOURCE` - C source file
+- `C_CODE_LOC` - C load address
+
+### Optional Variables (ASM without 8BP)
+
+- `LOADADDR` - Load address
+- `SOURCE` - Source file name
+- `TARGET` - Target binary name
+
+### Graphics Variables
+
+- `SPRITES_PATH` - PNG sprites directory
+- `SPRITES_OUT_FILE` - Output ASM file
+- `LOADER_SCREEN` - PNG screens directory
+- `MODE` - CPC mode (0, 1, or 2)
+
+### Output Variables
+
+- `OBJ_DIR` - Intermediate files (default: obj)
+- `DIST_DIR` - Output files (default: dist)
+- `DSK` - Disk image name
+- `CDT` - Tape image name
+- `CDT_FILES` - Files for tape
+- `CPR` - Cartridge name
+- `CPR_EXECUTE` - Cartridge boot file
+
+### Emulator Variables
+
+- `RVM_PATH` - RetroVirtualMachine path
+- `CPC_MODEL` - CPC model (464/664/6128)
+- `RUN_FILE` - Auto-execute file
+- `RUN_MODE` - Run mode (auto/dsk/cdt)
+
+## Output Filtering
+
+You can filter the output using standard Unix tools:
+
+```bash
+# Show only configured paths
+devcpc info | grep "✓"
+
+# Show emulator config
+devcpc info | grep -A 5 "Emulador:"
+
+# Show output files
+devcpc info | grep -A 5 "Directorios:"
+```
+
+## Comparison with Other Commands
+
+| Command | Purpose | Shows |
+|---------|---------|-------|
+| `info` | Show configuration | All settings from devcpc.conf |
+| `validate` | Check validity | Errors and warnings |
+| `build` | Compile | Build process and results |
+
+## Related Commands
+
+- [`devcpc validate`](/cli/validate) - Validate configuration
+- [`devcpc new`](/cli/new) - Create new project
+- [`devcpc build`](/cli/build) - Build with settings

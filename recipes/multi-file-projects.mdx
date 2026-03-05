@@ -1,0 +1,926 @@
+---
+title: "Multi-File Projects"
+description: "Organizing and managing large projects with multiple source files"
+---
+
+Learn best practices for structuring large Amstrad CPC projects with multiple assembly files, proper organization, and efficient build workflows.
+
+## Overview
+
+As projects grow, proper organization becomes critical. This guide covers:
+
+- Directory structure conventions
+- Multiple ASM file management
+- Include directives and dependencies
+- Build optimization
+- Version control practices
+
+## Project Structure Examples
+
+### Small Project (Single ASM File)
+
+```
+small-game/
+├── devcpc.conf
+├── src/
+│   ├── main.asm           # All code in one file
+│   └── loader.bas
+├── assets/
+│   ├── sprites/
+│   └── screen/
+├── obj/
+└── dist/
+```
+
+### Medium Project (Multiple ASM Files)
+
+```
+medium-game/
+├── devcpc.conf
+├── src/
+│   ├── asm/
+│   │   ├── main.asm         # Entry point
+│   │   ├── game.asm         # Game logic
+│   │   ├── sprites.asm      # Sprite data
+│   │   ├── levels.asm       # Level data
+│   │   └── utils.asm        # Utility functions
+│   ├── basic/
+│   │   └── loader.bas
+│   └── music/
+│       ├── music.mus
+│       └── effects.fx
+├── assets/
+│   ├── sprites/
+│   │   ├── player/
+│   │   ├── enemies/
+│   │   └── items/
+│   └── screen/
+├── obj/
+└── dist/
+```
+
+### Large Project (8BP with Modules)
+
+```
+large-game/
+├── devcpc.conf
+├── README.md
+├── docs/
+│   ├── design.md
+│   ├── controls.md
+│   └── levels.md
+├── src/
+│   ├── asm/
+│   │   ├── make_all_mygame.asm        # Master file
+│   │   ├── make_codigo_mygame.asm     # Code module
+│   │   ├── make_graficos_mygame.asm   # Graphics module
+│   │   ├── make_musica_mygame.asm     # Music module
+│   │   ├── 8bitsDePoder_v043_001.asm  # 8BP library
+│   │   ├── player_loader_cpc_v42.asm # WYZ player
+│   │   ├── game/
+│   │   │   ├── player.asm     # Player logic
+│   │   │   ├── enemies.asm    # Enemy AI
+│   │   │   ├── collision.asm  # Collision detection
+│   │   │   ├── level.asm      # Level management
+│   │   │   └── hud.asm        # HUD rendering
+│   │   ├── data/
+│   │   │   ├── images_mygame.asm      # Sprite images
+│   │   │   ├── sprites_table_mygame.asm # Sprite table
+│   │   │   ├── sequences_mygame.asm   # Animations
+│   │   │   ├── map_table_mygame.asm   # Map data
+│   │   │   └── routes_mygame.asm      # Enemy routes
+│   │   └── lib/
+│   │       ├── math.asm       # Math utilities
+│   │       ├── random.asm     # Random numbers
+│   │       ├── text.asm       # Text rendering
+│   │       └── keyboard.asm   # Input handling
+│   ├── basic/
+│   │   ├── loader.bas
+│   │   ├── menu.bas
+│   │   └── credits.bas
+│   ├── c/
+│   │   ├── tools.c            # Level editor (optional)
+│   │   └── 8BP_wrapper/
+│   └── music/
+│       ├── title.mus
+│       ├── level1.mus
+│       ├── level2.mus
+│       ├── boss.mus
+│       ├── gameover.mus
+│       ├── victory.mus
+│       └── effects/
+│           ├── shoot.fx
+│           ├── jump.fx
+│           └── explosion.fx
+├── assets/
+│   ├── sprites/
+│   │   ├── player/
+│   │   │   ├── idle.png
+│   │   │   ├── walk_01.png
+│   │   │   ├── walk_02.png
+│   │   │   └── jump.png
+│   │   ├── enemies/
+│   │   │   ├── enemy1_01.png
+│   │   │   ├── enemy1_02.png
+│   │   │   ├── enemy2.png
+│   │   │   └── boss.png
+│   │   ├── items/
+│   │   │   ├── coin.png
+│   │   │   ├── powerup.png
+│   │   │   └── key.png
+│   │   └── tiles/
+│   │       ├── wall.png
+│   │       ├── floor.png
+│   │       └── platform.png
+│   └── screen/
+│       ├── title.png
+│       ├── loading.png
+│       ├── level1_bg.png
+│       └── gameover.png
+├── tools/
+│   ├── level_editor.py
+│   ├── sprite_packer.py
+│   └── map_converter.py
+├── tests/
+│   ├── test_player.bas
+│   ├── test_collision.bas
+│   └── test_sprites.bas
+├── obj/
+├── dist/
+└── .gitignore
+```
+
+## Include Directives (ABASM)
+
+### READ Directive
+
+Include assembly source files:
+
+```asm
+; main.asm
+let ASSEMBLING_OPTION = 0
+
+; Include library
+read "8bitsDePoder_v043_001.asm"
+
+; Include game modules
+read "game/player.asm"
+read "game/enemies.asm"
+read "game/collision.asm"
+
+; Include data
+read "data/images_mygame.asm"
+read "data/sprites_table_mygame.asm"
+
+; Include music
+read "music_player.asm"
+
+SAVE "8BP0.bin", 23600, 19120
+```
+
+### INCBIN Directive
+
+Include binary data:
+
+```asm
+; Include compiled music
+MUSIC_TITLE:
+    incbin "../music/title.mus"
+
+MUSIC_LEVEL1:
+    incbin "../music/level1.mus"
+
+; Include sound effects
+FX_SHOOT:
+    incbin "../music/effects/shoot.fx"
+```
+
+### Relative Paths
+
+```asm
+; From src/asm/main.asm
+read "game/player.asm"        ; src/asm/game/player.asm
+incbin "../music/song.mus"    ; src/music/song.asm
+```
+
+## Module Organization
+
+### Code Modules
+
+Separate by functionality:
+
+#### player.asm
+
+```asm
+; Player logic module
+
+; Constants
+PLAYER_SPEED equ 2
+PLAYER_JUMP_FORCE equ 5
+
+; Variables
+player_x: db 80
+player_y: db 100
+player_vx: db 0
+player_vy: db 0
+player_state: db 0  ; 0=idle, 1=walk, 2=jump
+
+; Public functions
+init_player:
+    ld a, 80
+    ld (player_x), a
+    ld a, 100
+    ld (player_y), a
+    ret
+
+update_player:
+    call check_input
+    call apply_physics
+    call update_animation
+    ret
+
+draw_player:
+    ld a, (player_x)
+    ld l, a
+    ld a, (player_y)
+    ld h, a
+    ld de, player_sprite
+    call putsprite
+    ret
+
+; Private functions
+check_input:
+    ; Check keyboard
+    ; Update player_vx, player_vy
+    ret
+
+apply_physics:
+    ; Apply gravity
+    ; Update positions
+    ret
+
+update_animation:
+    ; Change sprite based on state
+    ret
+```
+
+#### enemies.asm
+
+```asm
+; Enemy management module
+
+; Constants
+MAX_ENEMIES equ 8
+ENEMY_SPEED equ 1
+
+; Enemy structure (6 bytes each)
+; +0: X position
+; +1: Y position  
+; +2: VX velocity
+; +3: VY velocity
+; +4: Type (0=none, 1=walker, 2=flyer)
+; +5: State
+
+enemy_table:
+    ds MAX_ENEMIES * 6
+
+init_enemies:
+    ld hl, enemy_table
+    ld de, enemy_table + 1
+    ld bc, (MAX_ENEMIES * 6) - 1
+    ld (hl), 0
+    ldir
+    ret
+
+spawn_enemy:
+    ; Input: A = type, B = x, C = y
+    ; Find free slot
+    ; Initialize enemy
+    ret
+
+update_enemies:
+    ld b, MAX_ENEMIES
+    ld hl, enemy_table
+update_enemy_loop:
+    push bc
+    push hl
+    
+    ; Check if active
+    ld a, (hl)
+    or a
+    jr z, enemy_inactive
+    
+    ; Update this enemy
+    call update_single_enemy
+    
+enemy_inactive:
+    pop hl
+    ld de, 6
+    add hl, de
+    pop bc
+    djnz update_enemy_loop
+    ret
+
+update_single_enemy:
+    ; HL = enemy data pointer
+    ; Update AI
+    ; Move enemy
+    ; Check collisions
+    ret
+```
+
+### Data Modules
+
+Separate data from code:
+
+#### level1_data.asm
+
+```asm
+; Level 1 data
+
+level1_width: db 40      ; tiles
+level1_height: db 15
+
+level1_map:
+    ; Tile map (40x15 = 600 bytes)
+    db 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+    db 1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
+    db 1,0,0,0,0,2,2,2,0,0,0,0,0,0,0,0,0,0,0,1
+    ; ... more rows ...
+
+level1_enemies:
+    ; Enemy spawn data
+    db 1, 50, 80   ; type, x, y
+    db 1, 100, 80
+    db 2, 150, 60
+    db 255         ; end marker
+
+level1_items:
+    ; Item spawn data
+    db 1, 30, 90   ; type (coin), x, y
+    db 1, 60, 90
+    db 2, 120, 70  ; type (powerup), x, y
+    db 255         ; end marker
+```
+
+## Dependency Management
+
+### Include Order
+
+Careful ordering prevents undefined symbols:
+
+```asm
+; main.asm - correct order
+
+; 1. Constants and configuration
+let ASSEMBLING_OPTION = 0
+let DEBUG = 0
+
+; 2. Core library (defines symbols used by modules)
+read "8bitsDePoder_v043_001.asm"
+
+; 3. Utility modules (no dependencies)
+read "lib/math.asm"
+read "lib/random.asm"
+
+; 4. Game modules (depend on utilities)
+read "game/player.asm"     ; uses math
+read "game/enemies.asm"    ; uses random, player
+read "game/collision.asm"  ; uses player, enemies
+
+; 5. Data (depends on nothing)
+read "data/images_mygame.asm"
+read "data/sprites_table_mygame.asm"
+
+; 6. Music (depends on nothing)
+read "player_loader_cpc_v42.asm"
+```
+
+### Shared Constants
+
+Define once, use everywhere:
+
+#### constants.asm
+
+```asm
+; Global constants
+
+; Screen
+SCREEN_WIDTH equ 80      ; bytes
+SCREEN_HEIGHT equ 200    ; pixels
+SCREEN_BASE equ &C000
+
+; Game
+TILE_WIDTH equ 8         ; pixels
+TILE_HEIGHT equ 8
+MAX_SPRITES equ 32
+MAX_ENEMIES equ 16
+
+; Physics
+GRAVITY equ 1
+MAX_VY equ 8
+MAX_VX equ 4
+
+; Input
+KEY_UP equ &40
+KEY_DOWN equ &41
+KEY_LEFT equ &42
+KEY_RIGHT equ &43
+KEY_FIRE equ &47
+```
+
+Include first:
+```asm
+; In all modules
+read "constants.asm"
+```
+
+### Public/Private Symbols
+
+Use naming convention:
+
+```asm
+; Public functions (no underscore)
+init_player:
+    ; ...
+
+update_player:
+    ; ...
+
+; Private functions (leading underscore)
+_apply_gravity:
+    ; Only used internally
+    ; ...
+
+_check_boundaries:
+    ; Only used internally
+    ; ...
+```
+
+## Build Optimization
+
+### Conditional Assembly
+
+Compile different versions:
+
+```asm
+; main.asm
+let DEBUG = 1            ; Set to 0 for release
+let CHEATS = 0           ; Set to 1 for testing
+
+if DEBUG = 1
+    ; Debug code
+    debug_info:
+        db "DEBUG BUILD", 0
+    
+    print_debug:
+        ; Debug printing
+        ret
+endif
+
+if CHEATS = 1
+    ; Cheat codes
+    enable_invincibility:
+        ld a, 1
+        ld (player_invincible), a
+        ret
+endif
+```
+
+### Module Toggling
+
+```asm
+; Feature flags
+let INCLUDE_MUSIC = 1
+let INCLUDE_SOUND_FX = 1
+let INCLUDE_HI_SCORES = 0
+
+if INCLUDE_MUSIC = 1
+    read "music_player.asm"
+    read "music_data.asm"
+endif
+
+if INCLUDE_SOUND_FX = 1
+    read "sound_effects.asm"
+endif
+
+if INCLUDE_HI_SCORES = 1
+    read "hiscores.asm"
+endif
+```
+
+### Optimize Includes
+
+Only include what you need:
+
+```asm
+; Don't do this:
+read "entire_library.asm"  ; 20KB
+
+; Do this:
+read "lib/math.asm"        ; 1KB
+read "lib/random.asm"      ; 0.5KB
+; Only include used modules
+```
+
+## Version Control (.gitignore)
+
+### Recommended .gitignore
+
+```gitignore
+# Build outputs
+obj/
+dist/
+*.bin
+*.dsk
+*.cdt
+*.cpr
+*.lst
+*.map
+*.ihx
+*.lk
+*.sym
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Auto-generated
+src/asm/sprites.asm
+*.scn
+*.scn.info
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Keep example outputs
+!docs/examples/*.dsk
+```
+
+## Documentation Practices
+
+### Module Headers
+
+```asm
+;==============================================================================
+; PLAYER MODULE
+;==============================================================================
+; Handles player movement, animation, and state
+;
+; Public Functions:
+;   init_player()           - Initialize player at start position
+;   update_player()         - Update player logic (call every frame)
+;   draw_player()           - Draw player sprite
+;   get_player_pos()        - Returns: A=x, B=y
+;
+; Dependencies:
+;   - constants.asm
+;   - lib/math.asm
+;   - sprites_table_mygame.asm
+;
+; Memory Usage:
+;   - 16 bytes (variables)
+;   - No stack usage beyond function calls
+;==============================================================================
+```
+
+### Function Documentation
+
+```asm
+;------------------------------------------------------------------------------
+; check_collision
+;------------------------------------------------------------------------------
+; Check if player collides with any enemies
+;
+; Inputs:
+;   None (uses player_x, player_y)
+;
+; Outputs:
+;   A = 1 if collision, 0 if no collision
+;   Z flag set if no collision
+;
+; Destroys:
+;   BC, DE, HL
+;
+; Timing:
+;   ~150 T-states per enemy (worst case)
+;------------------------------------------------------------------------------
+check_collision:
+    ; Implementation
+    ret
+```
+
+### README.md Template
+
+```markdown
+# My Game
+
+Brief description of your game.
+
+## Building
+
+```bash
+devcpc build
+```
+
+## Running
+
+```bash
+devcpc run
+```
+
+## Project Structure
+
+- `src/asm/` - Assembly source code
+- `src/basic/` - BASIC loaders
+- `src/music/` - Music and sound effects
+- `assets/` - Graphics (PNG files)
+- `docs/` - Documentation
+
+## Controls
+
+- Arrow keys: Move
+- Space: Jump/Fire
+- M: Toggle music
+
+## Credits
+
+- Programming: Your Name
+- Graphics: Artist Name  
+- Music: Composer Name
+- Made with DevCPC: https://github.com/destroyer-dcf/DevCPC
+```
+
+## Testing Strategies
+
+### Unit Tests
+
+Test individual modules:
+
+#### test_player.bas
+
+```basic
+10 REM Test player module
+20 MEMORY 23599
+30 LOAD"8BP0.BIN"
+40 CALL &6B78
+50 MODE 0
+60 REM Initialize player
+70 CALL &5000: REM init_player address
+80 REM Test movement
+90 FOR i=1 TO 100
+100   CALL &5010: REM update_player
+110   CALL &5020: REM draw_player
+120   PRINT "X=";PEEK(&6000);" Y=";PEEK(&6001)
+130 NEXT i
+```
+
+### Integration Tests
+
+Test module interactions:
+
+```basic
+10 REM Test collision system
+20 MEMORY 23599
+30 LOAD"8BP0.BIN"
+40 CALL &6B78
+50 REM Setup
+60 CALL &5000: REM init_player
+70 CALL &5100: REM init_enemies
+80 A=1: X=50: Y=80
+90 CALL &5110: REM spawn_enemy(type, x, y)
+100 REM Test collision
+110 CALL &5200: REM check_collision
+120 IF PEEK(&6010)=1 THEN PRINT "COLLISION!"
+```
+
+## Performance Profiling
+
+### Timing Critical Sections
+
+```asm
+; Time a function
+profile_function:
+    ld bc, &BC00
+    in a, (c)        ; Read VSYNC
+    ld d, a          ; Save start
+    
+    call my_function ; Function to profile
+    
+    ld bc, &BC00
+    in a, (c)        ; Read VSYNC
+    sub d            ; Calculate difference
+    
+    ; A = time in frame ticks
+    ret
+```
+
+### Frame Time Budget
+
+```
+50Hz (PAL):
+  1 frame = 20ms = 80000 T-states
+
+Typical breakdown:
+  Game logic:  25000 T-states (31%)
+  Sprite draw: 30000 T-states (38%)
+  Music:        5000 T-states (6%)
+  Overhead:    10000 T-states (13%)
+  Spare:       10000 T-states (13%)
+```
+
+## Common Patterns
+
+### Initialization Sequence
+
+```asm
+main:
+    ; Disable interrupts
+    di
+    
+    ; Initialize subsystems
+    call init_player
+    call init_enemies
+    call init_level
+    call init_hud
+    call init_music
+    
+    ; Enable interrupts
+    ei
+    
+    ; Main loop
+main_loop:
+    halt             ; Wait for VSYNC
+    
+    call update_input
+    call update_player
+    call update_enemies
+    call check_collisions
+    call update_hud
+    
+    call draw_background
+    call draw_sprites
+    call draw_hud
+    
+    jr main_loop
+```
+
+### State Machine
+
+```asm
+; Game states
+STATE_MENU equ 0
+STATE_GAME equ 1
+STATE_PAUSE equ 2
+STATE_GAMEOVER equ 3
+
+game_state: db STATE_MENU
+
+update_game:
+    ld a, (game_state)
+    cp STATE_MENU
+    jr z, update_menu
+    cp STATE_GAME
+    jr z, update_gameplay
+    cp STATE_PAUSE
+    jr z, update_pause
+    cp STATE_GAMEOVER
+    jr z, update_gameover
+    ret
+
+update_menu:
+    ; Menu logic
+    ret
+
+update_gameplay:
+    ; Game logic
+    ret
+
+update_pause:
+    ; Pause logic
+    ret
+
+update_gameover:
+    ; Game over logic
+    ret
+```
+
+## Tools and Scripts
+
+### Level Editor (Python)
+
+```python
+#!/usr/bin/env python3
+# tools/level_editor.py
+
+import sys
+import json
+
+def convert_level_to_asm(level_json):
+    """Convert JSON level to ASM data"""
+    with open(level_json, 'r') as f:
+        level = json.load(f)
+    
+    output = f"; Generated from {level_json}\n\n"
+    output += f"level_width: db {level['width']}\n"
+    output += f"level_height: db {level['height']}\n\n"
+    output += "level_map:\n"
+    
+    for row in level['tiles']:
+        output += "    db " + ",".join(str(t) for t in row) + "\n"
+    
+    return output
+
+if __name__ == '__main__':
+    if len(sys.argv) != 3:
+        print("Usage: level_editor.py input.json output.asm")
+        sys.exit(1)
+    
+    asm = convert_level_to_asm(sys.argv[1])
+    with open(sys.argv[2], 'w') as f:
+        f.write(asm)
+    
+    print(f"Converted {sys.argv[1]} -> {sys.argv[2]}")
+```
+
+### Build Script
+
+```bash
+#!/bin/bash
+# build.sh - Custom build script
+
+set -e
+
+echo "=== Pre-build checks ==="
+
+# Check for required tools
+command -v python3 >/dev/null 2>&1 || { echo "Python 3 required"; exit 1; }
+
+# Generate level data
+echo "Generating levels..."
+python3 tools/level_editor.py levels/level1.json src/asm/data/level1.asm
+python3 tools/level_editor.py levels/level2.json src/asm/data/level2.asm
+
+# Run DevCPC build
+echo "=== Building project ==="
+devcpc build
+
+echo "=== Build complete ==="
+ls -lh dist/*.dsk
+```
+
+## Troubleshooting
+
+### "Symbol not defined"
+
+**Problem**: Using symbol before it's defined
+
+**Solution**: Check include order, define constants first
+
+### "Include file not found"
+
+**Problem**: Wrong relative path
+
+**Solution**: Use paths relative to current file:
+```asm
+read "../lib/utils.asm"  ; Go up one directory
+```
+
+### "Out of memory"
+
+**Problem**: Project too large
+
+**Solutions**:
+1. Remove unused code
+2. Optimize data structures
+3. Use compression
+4. Split into multiple binaries
+
+## Best Practices Summary
+
+1. **Organize by function**, not by file type
+2. **One concept per file** (player, enemies, etc.)
+3. **Include order matters** (dependencies first)
+4. **Document public interfaces**
+5. **Use meaningful names** (player.asm, not module1.asm)
+6. **Test individual modules** before integration
+7. **Version control everything** except generated files
+8. **Keep data separate** from code
+9. **Use constants** instead of magic numbers
+10. **Profile early** to avoid surprises
+
+## Related
+
+- [8BP Game Example](/examples/8bp-game) - Large organized project
+- [ASM Project Example](/examples/asm-project) - Clean ASM structure
+- [Music & Sound](/recipes/music-sound) - Organizing music files
+- [Sprite Animation](/recipes/sprite-animation) - Managing sprite assets

@@ -1,0 +1,742 @@
+---
+title: "Music & Sound"
+description: "Integrating WYZ Tracker music and sound effects into your games"
+---
+
+Learn how to add music and sound effects to your Amstrad CPC games using the WYZ Tracker and the integrated WYZ Player.
+
+## Overview
+
+DevCPC supports music through the WYZ Tracker format, which provides:
+
+- **3-channel AY-3-8912 music** (PSG chip)
+- **Sound effects** with channel priority
+- **Multiple songs** in one project
+- **Interrupt-driven playback** (no CPU overhead during gameplay)
+
+## Quick Start
+
+### 1. Get Music Files
+
+You need:
+- `.wyz` - WYZ Tracker project file
+- `.mus` - Compiled music data
+- `.mus.asm` - Assembly include file (optional)
+
+### 2. Place in Project
+
+```bash
+mkdir -p src/music
+cp song.wyz src/music/
+cp song.mus src/music/
+```
+
+### 3. Include in ASM
+
+In your `make_musica_mygame.asm`:
+
+```asm
+; Include WYZ Player
+read "player_loader_cpc_v42.asm"
+
+; Include music data
+MUSIC_00:
+    incbin "music/tecno001.mus"
+
+MUSIC_01:
+    incbin "music/stars3_v2.mus"
+
+; Sound effects (optional)
+FX_SHOOT:
+    incbin "music/shoot.fx"
+```
+
+### 4. Play from BASIC
+
+```basic
+10 MEMORY 23599
+20 LOAD"8BP0.BIN"
+30 CALL &6B78
+40 REM Start music (song 0)
+50 |MUSIC,0
+60 REM Game code here
+```
+
+### 5. Stop Music
+
+```basic
+100 REM Stop music
+110 |MUSICOFF
+```
+
+## WYZ Player v4.2
+
+### What is WYZ Player?
+
+The WYZ Player is a Z80 assembly routine that:
+- Plays music files from WYZ Tracker
+- Runs on interrupt (IM1 or IM2)
+- Supports 3 music channels (A, B, C)
+- Supports 1 effects channel (P)
+- Minimal CPU usage during playback
+
+### Player Files
+
+Included in 8BP projects:
+
+```asm
+; player_loader_cpc_v42.asm
+; WYZ Player v4.2 for Amstrad CPC
+
+PLAYER:
+    DI
+    CALL PLAYER_OFF
+    
+    ; Reserve memory for buffers
+    LD DE, 24              ; bytes per channel
+    LD HL, BUFFER_DEC
+    LD (CANAL_A), HL
+    
+    ADD HL, DE
+    LD (CANAL_B), HL
+    
+    ADD HL, DE
+    LD (CANAL_C), HL
+    
+    ADD HL, DE
+    LD (CANAL_P), HL
+    
+    ; Load song
+    LD A, (INS_cancion)    ; Song number
+    CALL CARGA_CANCION
+    
+    EI
+    RET
+
+; ... more player code ...
+```
+
+## Music File Formats
+
+### .wyz (WYZ Tracker Project)
+
+The source file created in WYZ Tracker:
+- Editable in WYZ Tracker software
+- Contains patterns, instruments, sequences
+- Not used directly by CPC
+
+### .mus (Compiled Music Data)
+
+Binary music data:
+- Compiled from .wyz
+- Includes note data, timing, effects
+- Loaded into CPC memory
+- Typical size: 1-8 KB per song
+
+### .mus.asm (Assembly Include)
+
+Optional assembly wrapper:
+
+```asm
+; Generated from .mus file
+MUSIC_TECNO:
+    db 0x57, 0x59, 0x5A  ; "WYZ" signature
+    db 0x00              ; Song number
+    dw patterns          ; Pattern data
+    dw instruments       ; Instrument data
+    ; ... music data ...
+```
+
+### .fx (Sound Effects)
+
+Short sound effects:
+- Explosion, shoot, jump, etc.
+- 1-channel effects
+- Can interrupt music temporarily
+
+## Creating Music with WYZ Tracker
+
+### 1. Download WYZ Tracker
+
+**Windows**: [WYZ Tracker](https://github.com/AugustoRuiz/WYZTracker)
+
+**Linux/Mac**: Use Wine or similar
+
+### 2. Create New Song
+
+1. **File** → **New**
+2. Set **Target**: Amstrad CPC
+3. Set **Clock**: 1MHz (CPC standard)
+4. Set **Frequency**: 50Hz (PAL) or 60Hz (NTSC)
+
+### 3. Create Patterns
+
+- Use the pattern editor
+- 3 channels: A (left), B (middle), C (right)
+- Enter notes: C-3, D#4, etc.
+- Add effects: volume, pitch, etc.
+
+### 4. Create Instruments
+
+1. **Instruments** tab
+2. Create envelope (volume over time)
+3. Set waveform (tone/noise)
+4. Set effects (vibrato, arpeggio)
+
+### 5. Arrange Song
+
+1. **Song** tab
+2. Add patterns in sequence
+3. Set loop points
+4. Set tempo
+
+### 6. Export
+
+1. **File** → **Export**
+2. Choose **MUS** format
+3. Save as `song.mus`
+4. Copy to your project's `music/` folder
+
+## Including Music in 8BP Projects
+
+### Standard 8BP Music Setup
+
+#### make_musica_mygame.asm
+
+```asm
+; Include WYZ Player
+read "player_loader_cpc_v42.asm"
+
+; Include instrument definitions
+INSTRUMENTOS:
+    incbin "music/instrumentos.ins"
+
+; Include songs
+MUSIC_00:
+    incbin "music/tecno001.mus"
+
+MUSIC_01:
+    incbin "music/stars3_v2.mus"
+
+MUSIC_02:
+    incbin "music/marcha3.mus"
+
+; Include sound effects
+FX_SHOOT:
+    incbin "music/shoot.fx"
+
+FX_JUMP:
+    incbin "music/jump.fx"
+
+FX_EXPLOSION:
+    incbin "music/explosion.fx"
+
+; Percussion effects (optional)
+PERCUSION:
+    incbin "music/percusiones.fx"
+```
+
+### Song Selection
+
+Songs are numbered starting from 0:
+
+```basic
+|MUSIC,0    ' Play song 0 (tecno001.mus)
+|MUSIC,1    ' Play song 1 (stars3_v2.mus)
+|MUSIC,2    ' Play song 2 (marcha3.mus)
+```
+
+## Playing Music from BASIC
+
+### Start Music
+
+```basic
+10 REM Initialize 8BP
+20 MEMORY 23599
+30 LOAD"8BP0.BIN"
+40 CALL &6B78
+50 REM Start song 0
+60 |MUSIC,0
+```
+
+### Stop Music
+
+```basic
+100 |MUSICOFF
+```
+
+### Change Songs
+
+```basic
+10 REM Title screen music
+20 |MUSIC,0
+30 REM Wait for key
+40 CALL &BB18
+50 REM Game music
+60 |MUSIC,1
+```
+
+### Check if Music Playing
+
+```basic
+10 REM Check music status
+20 status=PEEK(&6000): REM Example address
+30 IF status=0 THEN PRINT "Music stopped"
+40 IF status=1 THEN PRINT "Music playing"
+```
+
+## Playing Music from Assembly
+
+### Initialize Player
+
+```asm
+; Set up interrupts
+di
+
+; Initialize WYZ player
+call PLAYER
+
+; Enable interrupts
+ei
+```
+
+### Start Music
+
+```asm
+; Start song 0
+ld a, 0
+ld (INS_cancion), a
+call PLAYER
+```
+
+### Stop Music
+
+```asm
+call PLAYER_OFF
+```
+
+### Music in Interrupt
+
+```asm
+; IM1 interrupt handler
+org &0038
+interrupt_handler:
+    push af
+    push bc
+    push de
+    push hl
+    
+    ; Call WYZ player
+    call INICIO          ; Player update routine
+    
+    pop hl
+    pop de
+    pop bc
+    pop af
+    ei
+    reti
+```
+
+## Sound Effects
+
+### Playing Effects from BASIC
+
+If using 8BP with custom effects:
+
+```basic
+10 REM Play shoot sound
+20 |SFX,0
+```
+
+### Playing Effects from Assembly
+
+```asm
+; Play sound effect on channel P
+ld hl, FX_SHOOT
+call PLAY_FX
+
+PLAY_FX:
+    ; Save current music state
+    push bc
+    push de
+    
+    ; Load effect
+    ld (CANAL_P), hl
+    
+    ; Trigger effect
+    call PLAY_EFFECT
+    
+    pop de
+    pop bc
+    ret
+```
+
+### Creating Sound Effects
+
+In WYZ Tracker:
+
+1. Create short pattern (1-4 rows)
+2. Use envelope for volume control
+3. Use noise for explosions/hits
+4. Use tone for melodic sounds
+5. Export as .fx file
+
+## Advanced Music Techniques
+
+### Dynamic Music (Adaptive)
+
+Change music based on game state:
+
+```basic
+10 REM Normal gameplay
+20 |MUSIC,0
+30 REM Check player health
+40 IF health<20 THEN |MUSIC,1: REM Danger music
+50 IF health<5 THEN |MUSIC,2: REM Critical music
+```
+
+### Crossfade Between Songs
+
+```asm
+; Fade out current song
+fade_out:
+    ld b, 15             ; Max volume
+fade_loop:
+    ; Reduce volume on all channels
+    ld a, b
+    call SET_VOLUME_A
+    call SET_VOLUME_B
+    call SET_VOLUME_C
+    
+    ; Wait
+    halt
+    halt
+    halt
+    
+    djnz fade_loop
+    
+    ; Stop old song
+    call PLAYER_OFF
+    
+    ; Start new song
+    ld a, 1
+    ld (INS_cancion), a
+    call PLAYER
+    
+    ; Fade in
+    ld b, 0
+fadein_loop:
+    ld a, b
+    call SET_VOLUME_A
+    call SET_VOLUME_B
+    call SET_VOLUME_C
+    
+    halt
+    halt
+    halt
+    
+    inc b
+    ld a, b
+    cp 16
+    jr nz, fadein_loop
+    
+    ret
+```
+
+### Synchronized Events
+
+Sync game events to music beats:
+
+```asm
+; Track music position
+get_music_pos:
+    ld a, (PATTERN_POS)
+    ret
+
+; Trigger on specific beat
+check_beat:
+    call get_music_pos
+    cp 16                ; Beat 16
+    jr nz, not_beat_16
+    
+    ; Spawn enemy on beat
+    call spawn_enemy
+    
+not_beat_16:
+    ret
+```
+
+## Direct PSG Programming
+
+For custom sound without WYZ:
+
+### PSG Registers
+
+```
+Register  Function
+0-1       Channel A frequency (12-bit)
+2-3       Channel B frequency
+4-5       Channel C frequency
+6         Noise frequency (5-bit)
+7         Mixer (tone/noise enable)
+8         Channel A volume (4-bit)
+9         Channel B volume
+10        Channel C volume
+11-13     Envelope frequency
+14        Envelope shape
+15        I/O port
+```
+
+### Writing to PSG
+
+```asm
+; Write to PSG register
+; Input: A = register, C = value
+write_psg:
+    ld b, &F4            ; PSG register select
+    out (c), a
+    
+    ld b, &F6            ; PSG data write
+    ld a, c
+    out (c), a
+    ret
+```
+
+### Play Simple Tone
+
+```asm
+; Play 440Hz on channel A
+play_tone:
+    ; Set frequency (440Hz ≈ &0FE)
+    ld a, 0              ; Channel A fine
+    ld c, &FE
+    call write_psg
+    
+    ld a, 1              ; Channel A coarse
+    ld c, &0F
+    call write_psg
+    
+    ; Set volume (15 = max)
+    ld a, 8              ; Channel A volume
+    ld c, 15
+    call write_psg
+    
+    ; Enable tone
+    ld a, 7              ; Mixer
+    ld c, &FE            ; Tone A on, others off
+    call write_psg
+    
+    ret
+```
+
+### Create Explosion Sound
+
+```asm
+explode:
+    ; Enable noise on channel A
+    ld a, 7              ; Mixer
+    ld c, &F7            ; Noise A on
+    call write_psg
+    
+    ; Start with high noise frequency
+    ld a, 6              ; Noise period
+    ld c, 1
+    call write_psg
+    
+    ; Max volume
+    ld a, 8
+    ld c, 15
+    call write_psg
+    
+    ; Decrease noise frequency and volume
+    ld b, 31
+explode_loop:
+    push bc
+    
+    ; Decrease frequency
+    ld a, 6
+    ld c, b
+    call write_psg
+    
+    ; Decrease volume
+    ld a, b
+    srl a
+    ld c, a
+    ld a, 8
+    call write_psg
+    
+    ; Wait
+    halt
+    
+    pop bc
+    djnz explode_loop
+    
+    ; Silence
+    ld a, 8
+    ld c, 0
+    call write_psg
+    
+    ret
+```
+
+## Music File Organization
+
+### Project Structure
+
+```
+my_game/
+├── src/
+│   ├── asm/
+│   │   ├── make_all_mygame.asm
+│   │   ├── make_musica_mygame.asm
+│   │   └── player_loader_cpc_v42.asm
+│   └── music/
+│       ├── title.wyz           # Title screen music
+│       ├── title.mus
+│       ├── game.wyz            # Game music
+│       ├── game.mus
+│       ├── gameover.wyz        # Game over music
+│       ├── gameover.mus
+│       ├── instrumentos.ins    # Shared instruments
+│       ├── shoot.fx            # Sound effects
+│       ├── jump.fx
+│       └── explosion.fx
+```
+
+### Naming Convention
+
+```
+Good:
+  title_theme.mus
+  level1_music.mus
+  boss_battle.mus
+  
+Bad:
+  music1.mus
+  song2.mus
+  test.mus
+```
+
+## Memory Considerations
+
+### Music Size
+
+Typical sizes:
+- **Simple tune**: 1-2 KB
+- **Full song**: 4-8 KB
+- **Complex song**: 8-16 KB
+
+### Buffer Memory
+
+WYZ Player reserves:
+- **24 bytes per channel** × 4 channels = 96 bytes
+- Plus player code: ~2 KB
+
+### Optimizing Music Size
+
+1. **Reuse patterns**: Don't duplicate similar patterns
+2. **Share instruments**: Use same instruments across songs
+3. **Shorter loops**: Loop earlier in the song
+4. **Fewer effects**: Minimize envelope changes
+
+## Troubleshooting
+
+### No Music Plays
+
+**Possible causes**:
+1. Music not initialized: Call `PLAYER` first
+2. Interrupts disabled: Check `EI` is called
+3. Wrong song number: Check `INS_cancion` value
+4. File not included: Verify `incbin` path
+
+**Debug**:
+```asm
+; Check if player initialized
+ld a, (player_init_flag)
+or a
+jr z, not_initialized
+```
+
+### Music Sounds Wrong
+
+**Possible causes**:
+1. Wrong clock speed in WYZ Tracker (use 1MHz)
+2. Wrong refresh rate (use 50Hz for PAL)
+3. Corrupted .mus file
+4. Wrong player version
+
+### Music Stutters
+
+**Possible causes**:
+1. Too much code in interrupt
+2. Interrupts disabled too long
+3. DI without matching EI
+
+**Solution**:
+```asm
+; Keep interrupts enabled
+critical_section:
+    di                   ; Disable briefly
+    ; Quick operation
+    ei                   ; Re-enable immediately
+```
+
+### Sound Effects Don't Play
+
+**Possible causes**:
+1. Music using all channels
+2. Effect not loaded
+3. Channel priority issue
+
+**Solution**:
+```asm
+; Reserve channel C for effects
+; In music, leave channel C empty
+```
+
+## Best Practices
+
+### 1. Test Early
+
+Add music early in development to ensure memory budget:
+
+```bash
+# Check binary size
+ls -lh obj/8BP0.bin
+```
+
+### 2. Provide Mute Option
+
+```basic
+10 REM Music toggle
+20 IF INKEY(32)=0 THEN GOTO 50: REM M key
+30 GOTO 10
+50 IF music_on THEN |MUSICOFF: music_on=0: GOTO 10
+60 |MUSIC,current_song: music_on=1: GOTO 10
+```
+
+### 3. Consistent Volume
+
+Normalize all songs to similar volume levels in WYZ Tracker.
+
+### 4. Loop Points
+
+Set proper loop points in WYZ Tracker for seamless looping.
+
+### 5. Test on Real Hardware
+
+Music timing may differ between emulator and real CPC.
+
+## Example: Complete Music Setup
+
+See [8BP Game Example](/examples/8bp-game) for:
+- Multiple music tracks
+- Sound effects
+- Music/SFX mixing
+- Complete integration
+
+## Related
+
+- [8BP Game Example](/examples/8bp-game) - Full music integration
+- [Multi-File Projects](/recipes/multi-file-projects) - Organizing music files
+- [ASM Project Example](/examples/asm-project) - Custom sound routines

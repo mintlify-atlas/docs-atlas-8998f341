@@ -1,0 +1,451 @@
+---
+title: "BASIC Program"
+description: "Simple BASIC program with loading screens and raw data"
+---
+
+This example demonstrates a BASIC-only project with loading screens, raw data files, and cartridge (CPR) generation.
+
+## Project Structure
+
+```
+basic/
+├── devcpc.conf              # Project configuration
+├── src/
+│   ├── loader.bas           # Main BASIC program
+│   └── raw/                 # Raw data files
+│       └── texto.txt        # Text file without AMSDOS header
+├── assets/
+│   └── screen/              # Loading screens
+│       ├── key.png          # Keyboard image
+│       └── devcpc.png       # Logo
+├── obj/                     # Generated: SCN files
+└── dist/                    # Generated: DSK, CDT, CPR
+```
+
+## Configuration (devcpc.conf)
+
+```bash
+# Project name
+PROJECT_NAME="basic"
+
+# No BUILD_LEVEL - not using 8BP
+
+# Source paths
+BASIC_PATH="src"             # BASIC files
+RAW_PATH="raw"               # Raw binary files
+
+# Graphics conversion
+MODE=1                       # Mode 1: 320x200, 4 colors
+LOADER_SCREEN="assets/screen"
+
+# Output
+OBJ_DIR="obj"
+DIST_DIR="dist"
+DSK="${PROJECT_NAME}.dsk"
+CDT="${PROJECT_NAME}.cdt"
+CDT_FILES="loader.bas"
+
+# Cartridge (CPR) configuration
+CPR="${PROJECT_NAME}.cpr"
+CPR_EXECUTE="loader.bas"     # File to run on boot
+
+# Emulator
+RUN_MODE="dsk"
+RVM_PATH="/Applications/Retro Virtual Machine 2.app/Contents/MacOS/Retro Virtual Machine 2"
+CPC_MODEL=6128
+RUN_FILE="loader.bas"
+```
+
+## BASIC Program (loader.bas)
+
+```basic
+10 MODE 1
+20 BORDER 26
+30 INK 0,26: INK 1,0: INK 2,9: INK 3,18
+40 LOAD "KEY.SCN",&C000
+50 LOCATE 12,20
+60 PRINT "SDK for AMSTRAD CPC"
+70 CALL &C000: GOTO 70
+```
+
+### Line-by-Line Explanation
+
+**Line 10: MODE 1**
+- Sets screen mode 1 (320x200 pixels, 4 colors)
+- Uses 16KB of video memory
+
+**Line 20: BORDER 26**
+- Sets border color to white (INK 26)
+
+**Line 30: Color Palette**
+- `INK 0,26` - Pen 0 = White
+- `INK 1,0` - Pen 1 = Black  
+- `INK 2,9` - Pen 2 = Bright Green
+- `INK 3,18` - Pen 3 = Green
+
+**Line 40: Load Screen**
+- `LOAD "KEY.SCN",&C000` - Loads screen image directly to video memory
+- `&C000` is the video memory base address
+- SCN file is 16384 bytes (16KB full screen)
+
+**Line 50-60: Display Text**
+- `LOCATE 12,20` - Position cursor at column 12, row 20
+- `PRINT` - Display message over the loaded screen
+
+**Line 70: Infinite Loop**
+- `CALL &C000` - Call machine code at &C000 (if any)
+- `GOTO 70` - Loop forever
+
+## Raw Data File (texto.txt)
+
+```
+This is raw text data.
+It will be loaded without an AMSDOS header.
+Useful for level data, text, or binary resources.
+```
+
+Raw files are copied to the DSK without modification, allowing you to:
+- Store level data
+- Include text files
+- Add custom binary data
+- Bypass AMSDOS header requirements
+
+## Build and Run
+
+### Validate Project
+
+```bash
+devcpc validate
+```
+
+Output:
+```
+═══════════════════════════════════════
+  Validar Proyecto: basic
+═══════════════════════════════════════
+
+→ Validando configuración...
+✓ PROJECT_NAME: basic
+
+→ Validando rutas...
+✓ BASIC_PATH: src (1 archivo .bas)
+✓ RAW_PATH: raw (1 archivo)
+✓ LOADER_SCREEN: assets/screen (2 archivos PNG)
+
+✓ Proyecto válido
+```
+
+### Build Project
+
+```bash
+devcpc build
+```
+
+Output:
+```
+═══════════════════════════════════════
+  Compilar Proyecto: basic
+═══════════════════════════════════════
+
+→ Convirtiendo pantallas de carga...
+ℹ Modo: 1 (320x200, 4 colores)
+✓ key.scn generado (16384 bytes)
+✓ devcpc.scn generado (16384 bytes)
+
+→ Creando DSK...
+✓ DSK creado: dist/basic.dsk
+
+→ Añadiendo archivos BASIC...
+✓ loader.bas añadido
+
+→ Añadiendo pantallas SCN...
+✓ key.scn añadido
+✓ devcpc.scn añadido
+
+→ Añadiendo archivos RAW...
+✓ texto.txt añadido
+
+Contenido del DSK:
+0: LOADER  .BAS  [ st: 0 extend: 0 data pages: 3 ]
+1: KEY     .SCN  [ st: 0 extend: 0 data pages: 128 ]
+2: DEVCPC  .SCN  [ st: 0 extend: 0 data pages: 128 ]
+3: TEXTO   .TXT  [ st: 0 extend: 0 data pages: 1 ]
+
+→ Creando CDT...
+✓ CDT creado: dist/basic.cdt
+
+→ Creando CPR (cartucho)...
+ℹ Ejecuta: loader.bas
+✓ CPR creado: dist/basic.cpr (244KB)
+
+✓ Proyecto compilado exitosamente
+```
+
+### Run Project
+
+```bash
+# Run on DSK (disk)
+devcpc run --dsk
+
+# Run on CDT (tape)
+devcpc run --cdt
+
+# Auto-detect
+devcpc run
+```
+
+## Working with Loading Screens
+
+### Creating PNG for Mode 1
+
+Your PNG must be:
+- **Resolution**: 320x200 pixels exactly
+- **Colors**: Maximum 4 colors from CPC palette
+- **Format**: PNG (any bit depth)
+
+### CPC Palette for Mode 1
+
+Use these RGB colors in your image editor:
+
+```
+INK 0  = Black (0,0,0)
+INK 1  = Blue (0,0,128)
+INK 6  = Red (255,0,0)
+INK 9  = Dark Green (0,128,0)
+INK 11 = Cyan (0,128,255)
+INK 18 = Green (0,255,0)
+INK 24 = Yellow (255,255,0)
+INK 26 = White (255,255,255)
+```
+
+### Loading Screens in BASIC
+
+```basic
+10 MODE 1
+20 LOAD "SCREEN.SCN",&C000
+30 REM Screen is now displayed
+```
+
+### Loading Screens from ASM
+
+```asm
+; Load screen data
+ld hl, screen_data
+ld de, &C000
+ld bc, 16384
+ldir
+ret
+
+screen_data:
+    incbin "screen.scn"
+```
+
+## Cartridge (CPR) Support
+
+### What is CPR?
+
+CPR files are cartridge images for:
+- **GX-4000** - Amstrad's console
+- **CPC 464+** - CPC with cartridge port
+- **CPC 6128+** - CPC with cartridge port
+
+### CPR Configuration
+
+```bash
+# Enable CPR generation
+CPR="${PROJECT_NAME}.cpr"
+
+# File to execute on boot (no 'run' needed)
+CPR_EXECUTE="loader.bas"
+```
+
+Valid CPR_EXECUTE values:
+```bash
+CPR_EXECUTE="disc"           # Auto-boot default program
+CPR_EXECUTE="loader.bas"     # Run BASIC program
+CPR_EXECUTE="game.bin"       # Run binary
+```
+
+### CPR Build Output
+
+```
+→ Creando CPR...
+ℹ Archivo: loader.bas
+ℹ Comando: run"loader.bas"
+✓ Cartucho creado: dist/basic.cpr
+ℹ Tamaño: 244KB
+```
+
+### Using CPR Files
+
+1. **Emulator**: Load CPR in RetroVirtualMachine or similar
+2. **Real Hardware**: Flash to cartridge with appropriate tools
+3. **GX-4000**: Use with cartridge adapter
+
+## Creating Tape (CDT) Images
+
+### CDT Configuration
+
+```bash
+CDT="${PROJECT_NAME}.cdt"
+CDT_FILES="loader.bas"       # Files to include (order matters)
+```
+
+### Loading from Tape
+
+On the CPC:
+```
+RUN"
+```
+
+The tape will:
+1. Auto-play
+2. Load `loader.bas`
+3. Execute automatically
+
+### Multiple Files on Tape
+
+```bash
+CDT_FILES="intro.bas loader.bas game.bin"
+```
+
+Files load sequentially - order is critical!
+
+## Working with RAW Files
+
+### What are RAW Files?
+
+RAW files are added to the DSK **without** AMSDOS headers:
+- No load address
+- No execute address  
+- No file type
+- Just raw bytes
+
+### Use Cases
+
+1. **Level Data**: Store game levels as binary data
+2. **Text Files**: Include messages or dialog
+3. **Custom Formats**: Your own file formats
+4. **Large Data**: Bypass AMSDOS limitations
+
+### Loading RAW Files in BASIC
+
+```basic
+10 OPENIN "DATA.TXT"
+20 INPUT #9, data$
+30 PRINT data$
+40 CLOSEIN
+```
+
+### Loading RAW Files in ASM
+
+RAW files must be loaded using BIOS calls:
+
+```asm
+; Open file
+ld b, 0              ; Mode: read
+ld hl, filename
+call &BC77           ; CAS_IN_OPEN
+
+; Read data  
+ld hl, buffer
+ld de, 1024          ; Bytes to read
+call &BC80           ; CAS_IN_DIRECT
+
+; Close file
+call &BC7A           ; CAS_IN_CLOSE
+
+filename: db "DATA.TXT",0
+buffer: ds 1024
+```
+
+## Memory Considerations
+
+### Screen Memory
+
+```
+Mode 1 (320x200, 4 colors):
+  &C000 - &FFFF  16KB video memory
+  
+SCN files are exactly 16384 bytes
+LOAD "SCREEN.SCN",&C000 fills entire screen
+```
+
+### BASIC Memory
+
+```
+Default BASIC: 42KB available
+MEMORY &9FFF:  40KB available (reserves top memory)
+```
+
+## Complete Example: Multi-Screen Demo
+
+### Enhanced loader.bas
+
+```basic
+10 MODE 1
+20 CLS
+30 REM Load title screen
+40 BORDER 0: INK 0,0: INK 1,24: INK 2,6: INK 3,1
+50 LOAD"TITLE.SCN",&C000
+60 LOCATE 10,20: PRINT "PRESS ANY KEY"
+70 CALL &BB18: REM Wait for key
+80 REM Load game screen
+90 BORDER 26: INK 0,26: INK 1,0: INK 2,9: INK 3,18  
+100 LOAD"GAME.SCN",&C000
+110 LOCATE 5,22: PRINT "GAME SCREEN"
+120 CALL &BB18
+130 REM Load credits
+140 BORDER 0: INK 0,0: INK 1,24
+150 LOAD"CREDITS.SCN",&C000
+160 LOCATE 8,23: PRINT "CREDITS"
+170 CALL &BB18
+180 GOTO 30: REM Loop
+```
+
+### devcpc.conf for Multi-Screen
+
+```bash
+PROJECT_NAME="demo"
+BASIC_PATH="src"
+LOADER_SCREEN="assets/screen"  # Contains title.png, game.png, credits.png
+MODE=1
+DSK="${PROJECT_NAME}.dsk"
+CDT="${PROJECT_NAME}.cdt"
+CDT_FILES="loader.bas"  # All SCN files included automatically
+```
+
+## Troubleshooting
+
+### "Screen not displaying"
+
+- Verify PNG is exactly 320x200 for Mode 1 (or 160x200 for Mode 0)
+- Check you're using maximum 4 colors from CPC palette
+- Ensure MODE is set before LOAD
+
+### "File not found on DSK"
+
+- File names are truncated to 8 characters
+- Extension is max 3 characters
+- Use uppercase in BASIC: `LOAD"FILE.BAS"`
+
+### "Colors wrong"
+
+- Set INK values AFTER MODE command
+- Use .scn.info file to see detected palette
+- Match INK colors to those detected
+
+## Next Steps
+
+1. **Add More Screens**: Create multiple PNG files for different scenes
+2. **Interactive Menus**: Use INKEY$ for menu selection
+3. **Load Binaries**: Add machine code with `LOAD"PROG.BIN",&4000`
+4. **Data Files**: Store level data in RAW files
+5. **Test on Real CPC**: Use the generated DSK or CDT
+
+## Related
+
+- [8BP Game Example](/examples/8bp-game) - Using 8BP library
+- [ASM Project Example](/examples/asm-project) - Assembly programming
+- [Loading Screens](/recipes/loading-screens) - Detailed screen creation guide
+- [Multi-File Projects](/recipes/multi-file-projects) - Organizing larger projects

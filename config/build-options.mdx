@@ -1,0 +1,259 @@
+---
+title: 'Build Options'
+description: 'Compilation flags, build levels, and graphics modes'
+icon: 'hammer'
+---
+
+## Overview
+
+Build options control how your project is compiled, including the 8BP build level, graphics mode, and compilation-specific settings.
+
+## 8BP Build Levels
+
+The `BUILD_LEVEL` determines which 8BP functionalities are included in the compiled library.
+
+### Level 0: All Features
+
+```bash devcpc.conf
+BUILD_LEVEL=0
+```
+
+- **Memory**: 23599
+- **Size**: 19120 bytes
+- **Commands**: All 8BP commands
+  - `|LAYOUT` - Tile-based layouts
+  - `|COLAY` - Collision detection for layouts
+  - `|MAP2SP` - Map-to-sprite conversion
+  - `|UMA` - Universal memory access
+  - `|3D` - Pseudo-3D rendering
+- **Use case**: Games requiring all features (labyrinths + scrolling + 3D)
+- **BASIC memory**: Use `MEMORY 23599` in your BASIC loader
+
+### Level 1: Maze Games
+
+```bash devcpc.conf
+BUILD_LEVEL=1
+```
+
+- **Memory**: 24999
+- **Size**: 17620 bytes
+- **Commands**: Layout-based
+  - `|LAYOUT` - Tile-based layouts
+  - `|COLAY` - Collision detection
+- **Use case**: Maze games, Pac-Man-style games, tile-based puzzles
+- **BASIC memory**: Use `MEMORY 24999` in your BASIC loader
+
+### Level 2: Scroll Games
+
+```bash devcpc.conf
+BUILD_LEVEL=2
+```
+
+- **Memory**: 24799
+- **Size**: 17820 bytes
+- **Commands**: Scrolling and mapping
+  - `|MAP2SP` - Map-to-sprite conversion
+  - `|UMA` - Universal memory access
+- **Use case**: Platform games, side-scrollers, shoot-em-ups
+- **BASIC memory**: Use `MEMORY 24799` in your BASIC loader
+
+### Level 3: Pseudo-3D Games
+
+```bash devcpc.conf
+BUILD_LEVEL=3
+```
+
+- **Memory**: 23999
+- **Size**: 18620 bytes
+- **Commands**: 3D rendering
+  - `|3D` - Pseudo-3D effects
+- **Use case**: Racing games, 3D mazes, first-person perspectives
+- **BASIC memory**: Use `MEMORY 23999` in your BASIC loader
+
+### Level 4: Basic Features
+
+```bash devcpc.conf
+BUILD_LEVEL=4
+```
+
+- **Memory**: 25299
+- **Size**: 17320 bytes
+- **Commands**: Basic sprite commands only
+- **Use case**: Simple games without scrolling or complex layouts
+- **BASIC memory**: Use `MEMORY 25299` in your BASIC loader
+
+## Build Level Comparison Table
+
+| Level | Memory | Size (bytes) | Layout | Scroll | 3D | Extra Memory |
+|-------|--------|--------------|--------|--------|----|--------------|
+| 0 | 23599 | 19120 | ✅ | ✅ | ✅ | Base |
+| 1 | 24999 | 17620 | ✅ | ❌ | ❌ | +1400 |
+| 2 | 24799 | 17820 | ❌ | ✅ | ❌ | +1200 |
+| 3 | 23999 | 18620 | ❌ | ❌ | ✅ | +400 |
+| 4 | 25299 | 17320 | ❌ | ❌ | ❌ | +1700 |
+
+<Tip>
+Choose the highest build level that includes only the features you need to maximize available BASIC memory.
+</Tip>
+
+## Graphics Mode
+
+The `MODE` setting defines the CPC video mode for graphics conversions.
+
+### Mode 0: 16 Colors
+
+```bash devcpc.conf
+MODE=0
+```
+
+- **Resolution**: 160×200 pixels
+- **Colors**: 16 simultaneous colors (from 27-color palette)
+- **Pixels per byte**: 2
+- **Bits per pixel**: 4
+- **Use case**: Most games, rich graphics, detailed sprites
+- **PNG requirements**: 160px width (or multiples), max 16 colors
+
+### Mode 1: 4 Colors
+
+```bash devcpc.conf
+MODE=1
+```
+
+- **Resolution**: 320×200 pixels
+- **Colors**: 4 simultaneous colors (from 27-color palette)
+- **Pixels per byte**: 4
+- **Bits per pixel**: 2
+- **Use case**: Higher resolution games, text-heavy applications
+- **PNG requirements**: 320px width (or multiples of 4), max 4 colors
+
+### Mode 2: 2 Colors
+
+```bash devcpc.conf
+MODE=2
+```
+
+- **Resolution**: 640×200 pixels
+- **Colors**: 2 colors (typically black and white)
+- **Pixels per byte**: 8
+- **Bits per pixel**: 1
+- **Use case**: Hi-res games, arcade ports, monochrome graphics
+- **PNG requirements**: 640px width (or multiples of 8), max 2 colors
+
+## Mode Comparison
+
+| Mode | Resolution | Colors | Best For | Memory/Screen |
+|------|------------|--------|----------|---------------|
+| 0 | 160×200 | 16 | Colorful games, detailed sprites | 16 KB |
+| 1 | 320×200 | 4 | Text, medium-res graphics | 16 KB |
+| 2 | 640×200 | 2 | Hi-res, monochrome arcade ports | 16 KB |
+
+<Info>
+All modes use 16KB of video memory (&C000-&FFFF), but differ in how pixels are encoded.
+</Info>
+
+## Assembly-Only Projects
+
+For projects using pure assembly (not 8BP), configure these additional options:
+
+### LOADADDR
+
+Load address for the assembled binary.
+
+```bash devcpc.conf
+LOADADDR=0x1200
+```
+
+- **Type**: Hexadecimal address
+- **Default**: `0x1200`
+- **Required for**: Non-8BP assembly projects
+
+### SOURCE
+
+Main assembly source file (without extension).
+
+```bash devcpc.conf
+SOURCE="main"
+```
+
+- **Type**: String (filename without extension)
+- **Required for**: Non-8BP assembly projects
+- **Example**: If your file is `main.asm`, set `SOURCE="main"`
+
+### TARGET
+
+Output binary name (without extension).
+
+```bash devcpc.conf
+TARGET="program"
+```
+
+- **Type**: String (filename without extension)
+- **Required for**: Non-8BP assembly projects
+- **Example**: Generates `program.bin` in `${OBJ_DIR}/`
+
+## Compilation Process
+
+During `devcpc build`, the following steps occur:
+
+1. **Graphics Conversion** (if configured)
+   - PNG → ASM sprites (`SPRITES_PATH`)
+   - PNG → SCN screens (`LOADER_SCREEN`)
+
+2. **Assembly Compilation**
+   - Modifies `ASSEMBLING_OPTION` based on `BUILD_LEVEL`
+   - Compiles ASM with ABASM
+   - Validates memory limits (`_END_GRAPH < 42040`)
+
+3. **C Compilation** (if configured)
+   - Compiles C source with SDCC
+   - Validates memory limits (< 23999)
+
+4. **Image Generation**
+   - Creates DSK with all files
+   - Creates CDT if configured
+   - Creates CPR if configured
+
+## Example Configurations
+
+### Full-Featured Game (8BP Level 0)
+
+```bash devcpc.conf
+PROJECT_NAME="adventure_game"
+BUILD_LEVEL=0
+MODE=0
+
+ASM_PATH="asm/make_all_adventure.asm"
+BASIC_PATH="bas"
+SPRITES_PATH="assets/sprites"
+LOADER_SCREEN="assets/screen"
+```
+
+### Optimized Platformer (8BP Level 2)
+
+```bash devcpc.conf
+PROJECT_NAME="platformer"
+BUILD_LEVEL=2  # Scroll only, +1200 bytes BASIC memory
+MODE=0
+
+ASM_PATH="asm/make_all_platformer.asm"
+BASIC_PATH="bas"
+SPRITES_PATH="assets/sprites"
+```
+
+### Pure Assembly Project
+
+```bash devcpc.conf
+PROJECT_NAME="demo"
+LOADADDR=0x4000
+SOURCE="demo"
+TARGET="demo"
+
+MODE=1
+LOADER_SCREEN="assets/screen"
+```
+
+## See Also
+
+- [Project Settings](/config/project-settings) - Basic project configuration
+- [Graphics Configuration](/config/graphics) - PNG conversion options
+- [Paths Configuration](/config/paths) - Source file paths

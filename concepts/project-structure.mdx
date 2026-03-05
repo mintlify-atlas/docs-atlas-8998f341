@@ -1,0 +1,250 @@
+---
+title: 'Project Structure'
+description: 'Understanding the directory layout and organization of a DevCPC project'
+icon: 'folder-tree'
+---
+
+A DevCPC project follows a standardized directory structure that organizes your source code, assets, and build outputs. Understanding this structure is essential for effective development.
+
+## Standard Project Layout
+
+When you create a new project with `devcpc new`, the following structure is generated:
+
+```
+mi-juego/
+├── devcpc.conf          # Project configuration file
+├── README.md            # Project documentation
+├── .gitignore          # Git ignore rules
+│
+├── ASM/                # Assembly source code (8BP)
+│   ├── make_all_mygame.asm    # Main assembly file
+│   ├── images_mygame.asm      # Graphics data
+│   ├── music_mygame.asm       # Music/sound data
+│   └── sprites.asm            # Auto-generated sprites (if SPRITES_PATH used)
+│
+├── bas/                # BASIC programs
+│   ├── loader.bas      # Boot loader
+│   └── menu.bas        # Menu system
+│
+├── assets/             # Project resources
+│   ├── sprites/        # Sprite PNG files (SPRITES_PATH)
+│   │   ├── player.png
+│   │   ├── enemies/
+│   │   └── tiles/
+│   └── screen/         # Loading screen PNGs (LOADER_SCREEN)
+│       ├── title.png       # 160x200 (Mode 0)
+│       └── loading.png
+│
+├── raw/                # RAW binary files (optional)
+│   └── data.bin        # Data without AMSDOS header
+│
+├── C/                  # C source code (optional)
+│   ├── main.c          # Main C program
+│   ├── 8BP_wrapper/    # 8BP wrapper for C
+│   └── mini_BASIC/     # Mini BASIC runtime
+│
+├── obj/                # Generated: intermediate files
+│   ├── 8BP0.bin        # Compiled binary
+│   ├── *.lst           # Listing files
+│   ├── *.map           # Memory map files
+│   ├── *.scn           # Screen files (if LOADER_SCREEN configured)
+│   ├── *.scn.info      # Screen palette information
+│   └── *.ihx           # Intel HEX (C compilation)
+│
+└── dist/               # Generated: final output files
+    ├── mi-juego.dsk    # Disk image
+    ├── mi-juego.cdt    # Tape image (optional)
+    └── mi-juego.cpr    # Cartridge file (optional)
+```
+
+## Core Directories
+
+### Source Code Directories
+
+<AccordionGroup>
+  <Accordion title="ASM/ - Assembly Source" icon="code">
+    Contains Z80 assembly source code for the 8BP library. The main file (typically `make_all_mygame.asm`) serves as the entry point that includes all other ASM files.
+    
+    **Key points:**
+    - Set via `ASM_PATH` in `devcpc.conf`
+    - Must point to the main `.asm` file (not the directory)
+    - Example: `ASM_PATH="asm/make_all_mygame.asm"`
+    - Auto-generated `sprites.asm` placed here if `SPRITES_PATH` is configured
+  </Accordion>
+
+  <Accordion title="bas/ - BASIC Programs" icon="file-code">
+    Stores BASIC program files (`.bas`) that are automatically added to the DSK during build.
+    
+    **Key points:**
+    - Set via `BASIC_PATH` in `devcpc.conf`
+    - All `.bas` files are automatically included in the DSK
+    - Common use: loader programs, menus, game logic
+    - Example: `BASIC_PATH="bas"`
+  </Accordion>
+
+  <Accordion title="C/ - C Source Code" icon="c">
+    Optional directory for C code compiled with SDCC. Requires proper wrapper files to interact with 8BP.
+    
+    **Key points:**
+    - Set via `C_PATH` and `C_SOURCE` in `devcpc.conf`
+    - Requires SDCC compiler installed
+    - Must specify load address with `C_CODE_LOC`
+    - Memory limit: must be < 23999 to avoid overwriting 8BP
+  </Accordion>
+
+  <Accordion title="raw/ - Raw Binary Files" icon="file-binary">
+    Optional directory for raw binary files added to the DSK without AMSDOS headers.
+    
+    **Key points:**
+    - Set via `RAW_PATH` in `devcpc.conf`
+    - Files added as-is without modification
+    - Useful for custom data files
+  </Accordion>
+</AccordionGroup>
+
+### Asset Directories
+
+<CardGroup cols={2}>
+  <Card title="assets/sprites/" icon="image">
+    PNG image files for sprites. Automatically converted to ASM format during build.
+    
+    **Configuration:**
+    - `SPRITES_PATH="assets/sprites"`
+    - `SPRITES_OUT_FILE="ASM/sprites.asm"`
+    - Searches recursively for PNG files
+  </Card>
+
+  <Card title="assets/screen/" icon="desktop">
+    PNG image files for loading screens. Converted to SCN format and added to DSK.
+    
+    **Configuration:**
+    - `LOADER_SCREEN="assets/screen"`
+    - `MODE=0` (or 1, 2)
+    - Resolution: 160x200 (Mode 0), 320x200 (Mode 1), 640x200 (Mode 2)
+  </Card>
+</CardGroup>
+
+### Build Output Directories
+
+<AccordionGroup>
+  <Accordion title="obj/ - Intermediate Files" icon="folder-open">
+    Contains intermediate build artifacts. This directory is generated during compilation.
+    
+    **Contents:**
+    - `*.bin` - Compiled binary files (e.g., `8BP0.bin`)
+    - `*.lst` - Assembly listing files
+    - `*.map` - Memory map files
+    - `*.scn` - Converted screen files
+    - `*.scn.info` - Screen palette information
+    - `*.ihx` - Intel HEX files (from C compilation)
+    
+    **Configuration:**
+    - `OBJ_DIR="obj"` in `devcpc.conf`
+    - Cleaned with `devcpc clean`
+  </Accordion>
+
+  <Accordion title="dist/ - Final Output" icon="box">
+    Contains the final distributable files: DSK, CDT, and CPR images.
+    
+    **Contents:**
+    - `*.dsk` - Disk image (always generated)
+    - `*.cdt` - Tape image (optional, if `CDT` configured)
+    - `*.cpr` - Cartridge file (optional, if `CPR` configured)
+    
+    **Configuration:**
+    - `DIST_DIR="dist"` in `devcpc.conf`
+    - `DSK="${PROJECT_NAME}.dsk"`
+    - Cleaned with `devcpc clean`
+  </Accordion>
+</AccordionGroup>
+
+## Configuration File
+
+### devcpc.conf
+
+The `devcpc.conf` file is located in the project root and contains all configuration settings. It defines:
+
+- Project name and build level
+- Source code paths (ASM, BASIC, C, RAW)
+- Output directories and file names
+- Graphics conversion settings
+- Emulator configuration
+- CDT and CPR generation options
+
+See the [Configuration](/concepts/configuration) page for detailed information.
+
+## File Naming Conventions
+
+<Note>
+  DevCPC follows specific naming conventions to ensure compatibility with Amstrad CPC file systems.
+</Note>
+
+### Assembly Files
+- Main file: `make_all_<projectname>.asm`
+- Support files: `images_<projectname>.asm`, `music_<projectname>.asm`
+- Generated sprites: `sprites.asm`
+
+### Output Binaries
+- 8BP binaries: `8BP0.bin`, `8BP1.bin`, `8BP2.bin`, `8BP3.bin`, `8BP4.bin`
+  - Numbering corresponds to BUILD_LEVEL
+- C binaries: `<C_SOURCE>.bin` (e.g., `main.bin`)
+
+### Screen Files
+- SCN files: `<basename>.scn` (e.g., `title.png` → `title.scn`)
+- Info files: `<basename>.scn.info`
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Keep Source Organized" icon="folder">
+    Group related files in subdirectories within `assets/sprites/` and maintain clear naming conventions.
+  </Card>
+
+  <Card title="Comment Your Config" icon="comment">
+    Use comments in `devcpc.conf` to document optional features you're not using.
+  </Card>
+
+  <Card title="Version Control" icon="git">
+    Commit source directories (`ASM/`, `bas/`, `assets/`). Exclude build outputs (`obj/`, `dist/`).
+  </Card>
+
+  <Card title="Clean Builds" icon="broom">
+    Run `devcpc clean` before important builds to ensure fresh compilation.
+  </Card>
+</CardGroup>
+
+## What Gets Generated
+
+When you run `devcpc build`, the build system:
+
+1. **Converts graphics** (if configured):
+   - PNG sprites → ASM in `ASM/sprites.asm`
+   - PNG screens → SCN in `obj/*.scn`
+
+2. **Compiles source code**:
+   - Assembly → `obj/8BP<N>.bin`
+   - C code → `obj/<name>.bin` (if C_PATH configured)
+
+3. **Creates disk image**:
+   - Generates `dist/<PROJECT_NAME>.dsk`
+   - Adds all binaries, BASIC files, screens, and RAW files
+
+4. **Optional outputs** (if configured):
+   - Tape image: `dist/<PROJECT_NAME>.cdt`
+   - Cartridge: `dist/<PROJECT_NAME>.cpr`
+
+<Info>
+  All source files remain unchanged. DevCPC only generates files in `obj/` and `dist/`.
+</Info>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Build Levels" icon="layer-group" href="/concepts/build-levels">
+    Learn about the 5 build levels and memory optimization
+  </Card>
+  
+  <Card title="Configuration" icon="gear" href="/concepts/configuration">
+    Deep dive into devcpc.conf settings
+  </Card>
+</CardGroup>

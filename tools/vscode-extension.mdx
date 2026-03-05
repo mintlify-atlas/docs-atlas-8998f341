@@ -1,0 +1,219 @@
+---
+title: "VS Code Extension"
+description: "DevCPC integration for Visual Studio Code"
+icon: "code"
+---
+
+## Overview
+
+The official DevCPC VS Code extension provides seamless integration with Visual Studio Code, allowing you to build, run, and manage Amstrad CPC projects directly from your editor.
+
+## Features
+
+- ✅ **Task Explorer** - Visualize all DevCPC commands in the sidebar
+- ✅ **One-Click Execution** - Run any command with a single click
+- ✅ **Auto-Refresh** - Automatically detects configuration changes
+- ✅ **Native Integration** - Uses VS Code's built-in terminal and task system
+- ✅ **Project Detection** - Automatically recognizes DevCPC projects
+
+## Installation
+
+<Tabs>
+  <Tab title="Marketplace">
+    Install directly from VS Code:
+
+    <Steps>
+      <Step title="Open Extensions">
+        Press `⇧⌘X` (Mac) or `Ctrl+Shift+X` (Windows/Linux) to open the Extensions view.
+      </Step>
+
+      <Step title="Search">
+        Search for **"DevCPC Tasks"** in the marketplace.
+      </Step>
+
+      <Step title="Install">
+        Click **Install** to add the extension.
+      </Step>
+    </Steps>
+  </Tab>
+
+  <Tab title="Command Line">
+    Install via the command line:
+
+    ```bash
+    code --install-extension devcpc.devcpc-tasks
+    ```
+  </Tab>
+
+  <Tab title="Direct Link">
+    Install from the VS Code Marketplace:
+
+    [📦 Install DevCPC Tasks](https://marketplace.visualstudio.com/items?itemName=devcpc.devcpc-tasks)
+  </Tab>
+</Tabs>
+
+## Usage
+
+<Steps>
+  <Step title="Open a DevCPC project">
+    Open any folder containing a `devcpc.conf` file in VS Code.
+  </Step>
+
+  <Step title="Access the DevCPC view">
+    The **DevCPC** panel appears in the Explorer sidebar, showing all available tasks:
+
+    - 🆕 New Project
+    - 🔨 Build
+    - 🧹 Clean
+    - ▶️ Run
+    - ℹ️ Info
+    - ✅ Validate
+    - 🔄 Update
+    - 📄 Version
+    - ❓ Help
+  </Step>
+
+  <Step title="Click to execute">
+    Click any task to run it in the integrated terminal.
+  </Step>
+
+  <Step title="Refresh when needed">
+    Click the refresh button to update the task list after modifying `devcpc.conf`.
+  </Step>
+</Steps>
+
+## Task Descriptions
+
+### Build Tasks
+
+<Accordion title="🔨 Build">
+  Compiles your entire project:
+  - Converts sprites and screens
+  - Compiles ASM, BASIC, and C code
+  - Generates DSK/CDT/CPR images
+  - Validates memory limits
+</Accordion>
+
+<Accordion title="🧹 Clean">
+  Removes generated files:
+  - Deletes `obj/` directory
+  - Deletes `dist/` directory
+  - Removes backup files
+</Accordion>
+
+### Testing Tasks
+
+<Accordion title="▶️ Run">
+  Launches your game in the configured emulator:
+  - Auto-detects DSK or CDT mode
+  - Closes previous emulator sessions
+  - Supports `--dsk` and `--cdt` flags
+</Accordion>
+
+<Accordion title="✅ Validate">
+  Pre-build validation:
+  - Checks configuration
+  - Verifies paths exist
+  - Validates tool availability
+</Accordion>
+
+### Project Management
+
+<Accordion title="🆕 New Project">
+  Creates a new DevCPC project with template selection.
+</Accordion>
+
+<Accordion title="ℹ️ Info">
+  Displays project configuration and settings.
+</Accordion>
+
+### Maintenance Tasks
+
+<Accordion title="🔄 Update">
+  Updates DevCPC to the latest version from GitHub.
+</Accordion>
+
+<Accordion title="📄 Version">
+  Shows current DevCPC version and checks for updates.
+</Accordion>
+
+## Keyboard Shortcuts
+
+Create custom keyboard shortcuts for DevCPC tasks:
+
+```json settings.json
+{
+  "keybindings": [
+    {
+      "key": "ctrl+shift+b",
+      "command": "workbench.action.tasks.runTask",
+      "args": "DevCPC: Build"
+    },
+    {
+      "key": "ctrl+shift+r",
+      "command": "workbench.action.tasks.runTask",
+      "args": "DevCPC: Run"
+    }
+  ]
+}
+```
+
+## Configuration
+
+The extension uses your project's `devcpc.conf` and doesn't require additional VS Code settings.
+
+### Optional Settings
+
+Customize behavior in VS Code settings:
+
+```json settings.json
+{
+  "devcpc.autoRefresh": true,
+  "devcpc.showNotifications": true,
+  "terminal.integrated.scrollback": 5000
+}
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Tasks not appearing">
+    Make sure:
+    - You've opened a folder containing `devcpc.conf`
+    - DevCPC is installed and in your PATH
+    - Click the refresh button in the DevCPC panel
+  </Accordion>
+
+  <Accordion title="Command not found">
+    Reload VS Code after installing DevCPC:
+    ```
+    Cmd+Shift+P → "Developer: Reload Window"
+    ```
+  </Accordion>
+
+  <Accordion title="Terminal output cut off">
+    Increase terminal scrollback:
+    ```json
+    "terminal.integrated.scrollback": 10000
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Development
+
+The extension is open source:
+
+- [Extension Source Code](https://github.com/destroyer-dcf/DevCPC)
+- [Report Issues](https://github.com/destroyer-dcf/DevCPC/issues)
+- [Contribute](https://github.com/destroyer-dcf/DevCPC/blob/main/CONTRIBUTING.md)
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Custom Workflows" icon="wand-magic-sparkles" href="/advanced/custom-workflows">
+    Extend DevCPC with custom scripts
+  </Card>
+  <Card title="CLI Reference" icon="terminal" href="/cli/build">
+    Full command-line reference
+  </Card>
+</CardGroup>

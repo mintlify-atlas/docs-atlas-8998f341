@@ -1,0 +1,444 @@
+---
+title: Cartridge Images (CPR)
+description: Creating ROM cartridge images for Amstrad GX-4000 and CPC Plus
+---
+
+## Overview
+
+CPR (Cartridge ROM) files are cartridge images for Amstrad GX-4000 and CPC Plus systems. DevCPC can automatically generate CPR files that boot instantly when inserted.
+
+## What is a CPR?
+
+CPR is the cartridge format for:
+- **Amstrad GX-4000** - Console (cartridge-only)
+- **CPC 464+** - Computer with cartridge port
+- **CPC 6128+** - Computer with cartridge port
+
+Cartridges offer:
+- **Instant boot** - No loading time
+- **Plug & play** - Insert and power on
+- **Large capacity** - Up to 512KB
+- **Professional feel** - Console-like experience
+
+## Hardware Compatibility
+
+| Hardware | Compatible | Notes |
+|----------|------------|-------|
+| **GX-4000** | ✅ Yes | Console (cartridge only) |
+| **CPC 464+** | ✅ Yes | Plus series with cart port |
+| **CPC 6128+** | ✅ Yes | Plus series with cart port |
+| **CPC 464/664/6128** | ❌ No | Classic models (no cart port) |
+| **Emulators** | ⚠️ Some | RVM, WinAPE (Plus mode) |
+
+## Configuration
+
+Add to your `devcpc.conf`:
+
+```bash
+# Enable CPR generation
+CPR="${PROJECT_NAME}.cpr"
+
+# File to auto-execute (without 'run' command)
+CPR_EXECUTE="loader.bas"
+```
+
+### Simple Configuration
+
+Only specify the **filename**, not the full command:
+
+```bash
+# ✅ Correct - Just the filename
+CPR_EXECUTE="loader.bas"
+CPR_EXECUTE="8BP0.BIN"
+CPR_EXECUTE="disc"
+
+# ❌ Wrong - Don't include 'run'
+CPR_EXECUTE='run"loader.bas"'
+```
+
+DevCPC builds the `run"..."` command automatically.
+
+## CPR Creation Process
+
+During `devcpc build`, if CPR is configured:
+
+### Step 1: Verify DSK Exists
+
+CPR is generated **from the DSK**, so DSK must be created first.
+
+```bash
+✓ DSK creado: dist/my-game.dsk
+```
+
+### Step 2: Convert DSK to CPR
+
+Uses `nocart.py` to create cartridge:
+
+```bash
+python3 nocart.py dist/my-game.dsk dist/my-game.cpr 'run"loader.bas"'
+```
+
+### Step 3: Patch ROMs
+
+Includes required system ROMs:
+- OS ROM
+- BASIC ROM  
+- AMSDOS ROM
+
+### Step 4: Configure Boot
+
+Sets auto-execute command that runs on power-on.
+
+### Step 5: Show Info
+
+Displays cartridge details:
+```bash
+Archivo:  my-game.cpr
+Tamaño:   244K
+MD5:      d3d371b683bfe1f988626cdafd8bc132
+Ejecuta:  loader.bas
+Comando:  run"loader.bas"
+```
+
+## Build Output Example
+
+```bash
+═══════════════════════════════════════
+  Crear Cartucho CPR
+═══════════════════════════════════════
+
+ℹ CPR: space-shooter.cpr
+ℹ Ubicación: dist/space-shooter.cpr
+
+→ Creando cartucho CPR: space-shooter.cpr
+ℹ Archivo: loader.bas
+ℹ Comando: run"loader.bas"
+✓ Cartucho CPR creado: dist/space-shooter.cpr
+ℹ Tamaño: 244K
+
+→ Información del Cartucho CPR:
+
+  Archivo:  space-shooter.cpr
+  Tamaño:   244K
+  MD5:      a7f8b3c2d4e9f1a6b8c5d2e3f4a5b6c7
+  Ejecuta:  loader.bas
+  Comando:  run"loader.bas"
+```
+
+## CPR Execute Options
+
+### BASIC Loader
+
+Most common - load BASIC program first:
+
+```bash
+CPR_EXECUTE="loader.bas"
+```
+
+The BASIC file can then load and run other files:
+
+```basic
+' loader.bas
+10 MODE 0
+20 LOAD"TITLE.SCN",&C000
+30 INK 0,0: INK 1,24
+40 MEMORY 23599
+50 LOAD"8BP0.BIN"
+60 CALL &6B78
+```
+
+### Direct Binary
+
+Load binary directly (no BASIC):
+
+```bash
+CPR_EXECUTE="8BP0.BIN"
+```
+
+Binary must auto-start or the screen will just show loading.
+
+### Default Program
+
+Load first program on disk:
+
+```bash
+CPR_EXECUTE="disc"
+```
+
+Equivalent to typing `RUN"DISC"` on CPC.
+
+## Complete Example
+
+### Project Configuration
+
+```bash
+# devcpc.conf
+PROJECT_NAME="mega-game"
+BUILD_LEVEL=0
+
+# Paths
+ASM_PATH="asm/make_all_mygame.asm"
+BASIC_PATH="bas"
+LOADER_SCREEN="assets/screen"
+
+# Generate all three formats
+DSK="${PROJECT_NAME}.dsk"
+CDT="${PROJECT_NAME}.cdt"
+CPR="${PROJECT_NAME}.cpr"
+
+# CDT file order
+CDT_FILES="loader.bas 8BP0.bin"
+
+# CPR auto-execute
+CPR_EXECUTE="loader.bas"
+
+# Emulator settings
+RVM_PATH="/Applications/Retro Virtual Machine 2.app/Contents/MacOS/Retro Virtual Machine 2"
+CPC_MODEL=6128
+RUN_MODE="auto"
+```
+
+### File Structure
+
+```
+mega-game/
+├── asm/
+│   └── make_all_mygame.asm
+├── bas/
+│   └── loader.bas
+├── assets/
+│   └── screen/
+│       └── title.png
+└── devcpc.conf
+```
+
+### Build Result
+
+```bash
+devcpc build
+
+# Generated files:
+dist/
+├── mega-game.dsk  (178KB)  # Disk version
+├── mega-game.cdt  (varies) # Tape version  
+└── mega-game.cpr  (244KB)  # Cartridge version
+```
+
+### Distribution
+
+Provide users with all formats:
+
+- **mega-game.dsk** - For CPC 664/6128, M4 Board, emulators
+- **mega-game.cdt** - For CPC 464, tape loading
+- **mega-game.cpr** - For GX-4000, CPC Plus
+
+## CPR Advantages
+
+### For Users
+
+✅ **Instant boot** - No waiting for tape/disk
+✅ **No setup** - Just insert and play
+✅ **Authentic feel** - Real cartridge experience
+✅ **Reliable** - No loading errors
+
+### For Developers
+
+✅ **Professional** - Polished distribution
+✅ **Large capacity** - Up to 512KB vs 178KB (DSK)
+✅ **Copy protection** - Harder to pirate than disk
+✅ **Demo friendly** - Perfect for showcases
+
+## CPR Limitations
+
+### Hardware
+
+❌ **Not compatible** with classic CPC (no cart port)
+❌ **Requires** GX-4000 or Plus models
+❌ **Can't modify** - ROM is read-only
+
+### Development
+
+❌ **Slower testing** - Must rebuild CPR each time
+❌ **No saves** - Can't write back to cartridge
+❌ **Emulator support** - Limited emulator compatibility
+
+## Using CPR Files
+
+### In Emulator
+
+**RetroVirtualMachine:**
+```bash
+open "Retro Virtual Machine 2.app" dist/my-game.cpr
+```
+
+**WinAPE:**
+1. File → Cartridge → Insert Cartridge
+2. Select your .cpr file
+3. System → Reset (CPC Plus mode)
+
+### On Real Hardware
+
+**GX-4000:**
+1. Flash to cartridge with FlashGordon or similar
+2. Insert cartridge
+3. Power on
+
+**CPC Plus:**
+1. Flash to cartridge
+2. Insert in cartridge port
+3. Power on or press Reset
+
+## Multi-Format Projects
+
+Generate all formats for maximum compatibility:
+
+```bash
+# devcpc.conf
+DSK="${PROJECT_NAME}.dsk"    # All CPCs, emulators
+CDT="${PROJECT_NAME}.cdt"    # Tape experience
+CPR="${PROJECT_NAME}.cpr"    # GX-4000/Plus
+
+CDT_FILES="loader.bas 8BP0.bin"
+CPR_EXECUTE="loader.bas"
+```
+
+**Build once, distribute everywhere:**
+
+```bash
+devcpc build
+
+# Test on different formats
+devcpc run --dsk    # Test disk version
+devcpc run --cdt    # Test tape version
+open my-game.cpr    # Test cartridge (emulator)
+```
+
+## Format Comparison
+
+| Feature | DSK | CDT | CPR |
+|---------|-----|-----|-----|
+| **Speed** | Fast | Slow | Instant |
+| **Capacity** | 178KB | Variable | 512KB max |
+| **Access** | Random | Sequential | Random |
+| **Boot** | Manual load | `RUN"` | Auto |
+| **Hardware** | 664/6128 | All CPCs | GX-4000/Plus |
+| **Emulators** | All | All | Some |
+| **Development** | Fast | Slow | Slow |
+| **Distribution** | Common | Retro | Professional |
+
+## Troubleshooting
+
+### CPR Not Created
+
+**DSK must exist first:**
+```bash
+# CPR is built FROM DSK
+# Ensure DSK builds successfully
+```
+
+**Check configuration:**
+```bash
+# Both must be set
+CPR="${PROJECT_NAME}.cpr"
+CPR_EXECUTE="loader.bas"
+```
+
+**Verify nocart.py:**
+```bash
+ls ~/.DevCPC/tools/nocart/nocart.py
+```
+
+### CPR Won't Boot
+
+**Wrong execute file:**
+- File must exist on DSK
+- Check filename spelling
+- Use `.bas` extension for BASIC
+
+**Incorrect command:**
+- Use filename only, not `run"..."` 
+- Example: `loader.bas` not `run"loader.bas"`
+
+**ROM issues:**
+- Ensure Plus ROMs are available
+- Rebuild with `devcpc clean && devcpc build`
+
+### Emulator Issues
+
+**CPR won't load:**
+- Switch to Plus/GX-4000 mode
+- Some emulators have limited CPR support
+- Try different emulator
+
+**Crashes on boot:**
+- Check DSK contents are valid
+- Verify auto-execute file works from DSK first
+- Test DSK before building CPR
+
+## Best Practices
+
+1. **Test DSK first** - Ensure DSK works before CPR
+2. **Simple loaders** - Keep CPR_EXECUTE simple
+3. **Provide alternatives** - Distribute DSK + CDT + CPR
+4. **Document requirements** - Tell users GX-4000/Plus needed
+5. **Use for releases** - CPR for final distribution
+
+## Advanced Usage
+
+### Multiple CPR Variants
+
+Create different CPRs from same project:
+
+```bash
+# Build normal CPR
+devcpc build
+cp dist/game.cpr dist/game-full.cpr
+
+# Modify config for demo version
+CPR_EXECUTE="demo.bas"
+devcpc build
+cp dist/game.cpr dist/game-demo.cpr
+```
+
+### Custom Boot Sequence
+
+Create elaborate boot sequences:
+
+```basic
+' autoboot.bas
+10 MODE 0
+20 LOAD"LOGO.SCN",&C000
+30 INK 0,0: INK 1,6
+40 CALL &BB18  ' Wait for key
+50 LOAD"TITLE.SCN",&C000
+60 INK 0,0: INK 1,24
+70 CALL &BB18
+80 MEMORY 23599
+90 LOAD"8BP0.BIN"
+100 CALL &6B78
+```
+
+```bash
+CPR_EXECUTE="autoboot.bas"
+```
+
+## Manual CPR Creation
+
+```bash
+# Create CPR from DSK manually
+python3 ~/.DevCPC/tools/nocart/nocart.py \
+  dist/my-game.dsk \
+  dist/my-game.cpr \
+  'run"loader.bas"'
+
+# Verify CPR
+ls -lh dist/my-game.cpr
+md5 dist/my-game.cpr
+```
+
+## See Also
+
+- [Disk Images](/guides/disk-images) - DSK format (required for CPR)
+- [Tape Images](/guides/tape-images) - CDT alternative
+- [Compiling Code](/guides/compiling-code) - Build process
+- [Creating Projects](/guides/creating-projects) - Project setup

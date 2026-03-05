@@ -1,0 +1,424 @@
+---
+title: Disk Images (DSK)
+description: Creating and managing Amstrad CPC disk images with DevCPC
+---
+
+## Overview
+
+DSK files are disk images for Amstrad CPC that store programs, data, and graphics. DevCPC automatically creates and manages DSK files during the build process.
+
+## What is a DSK?
+
+A DSK file is a 178KB disk image that emulates a 3" floppy disk used by Amstrad CPC computers. It contains:
+- BASIC programs
+- Binary files (compiled code)
+- Screen files (SCN)
+- Data files
+- Raw binary data
+
+DSK files work with:
+- Emulators (RetroVirtualMachine, WinAPE, etc.)
+- Real hardware via M4 Board, HxC, Gotek
+- Disk utilities for CPC
+
+## Automatic DSK Creation
+
+DevCPC creates DSK files automatically during `devcpc build`.
+
+### Configuration
+
+```bash
+# devcpc.conf
+PROJECT_NAME="my-game"
+DSK="${PROJECT_NAME}.dsk"  # Output: my-game.dsk
+DIST_DIR="dist"             # Location: dist/my-game.dsk
+```
+
+### Build Process
+
+During compilation, DevCPC:
+
+1. **Creates empty DSK** (178KB)
+2. **Adds compiled binary** (8BP or ASM)
+3. **Adds screen files** (if LOADER_SCREEN configured)
+4. **Adds BASIC programs** (if BASIC_PATH configured)
+5. **Adds RAW files** (if RAW_PATH configured)
+6. **Shows catalog** (lists all files)
+
+```bash
+devcpc build
+
+# Output:
+✓ DSK creado: dist/my-game.dsk
+✓ 8BP0.bin añadido al DSK
+✓ 2 pantalla(s) añadida(s) al DSK
+✓ 1 archivo(s) BASIC añadidos
+
+Contenido del DSK:
+0: 8BP0    .BIN  [ st: 0 extend: 0 data pages: 128 ]
+1: TITLE   .SCN  [ st: 0 extend: 0 data pages: 128 ]
+2: LOADER  .BAS  [ st: 0 extend: 0 data pages: 3 ]
+```
+
+## DSK Structure
+
+A typical DevCPC DSK contains:
+
+```
+my-game.dsk (178KB)
+├── 8BP0.BIN      # Compiled game code (19KB)
+├── TITLE.SCN     # Title screen (16KB)
+├── LOADER.BAS    # BASIC loader (1KB)
+├── MAIN.BIN      # Additional code
+└── DATA.BIN      # Game data
+```
+
+### File Types on DSK
+
+| Type | Extension | Description | Load Address | Size |
+|------|-----------|-------------|--------------|------|
+| **Binary** | .BIN | Compiled code | Configurable | Variable |
+| **Screen** | .SCN | Full screen | 0xC000 | 16KB |
+| **BASIC** | .BAS | BASIC program | Auto | Variable |
+| **Raw** | Any | Data files | N/A | Variable |
+
+## Adding Files to DSK
+
+### Binary Files (.BIN)
+
+Binary files are added with load and execute addresses.
+
+**8BP Projects:**
+```bash
+# Automatically added during build
+# File: 8BP{BUILD_LEVEL}.bin
+# Load: Depends on BUILD_LEVEL
+# Example: 8BP0.bin @ 0x5C30
+```
+
+**Pure ASM Projects:**
+```bash
+# Configuration
+TARGET="program"
+LOADADDR="0x4000"
+
+# File: program.bin
+# Load: 0x4000
+# Execute: 0x4000
+```
+
+**From CPC:**
+```basic
+LOAD"8BP0.BIN"
+CALL &5C30
+```
+
+### Screen Files (.SCN)
+
+Screens are automatically added if `LOADER_SCREEN` is configured.
+
+```bash
+LOADER_SCREEN="assets/screen"
+MODE=0
+```
+
+All `.scn` files from `obj/` are added with:
+- Load address: `0xC000` (video memory)
+- Execute address: `0xC000`
+- Size: 16KB each
+
+**From CPC:**
+```basic
+MODE 0
+LOAD"TITLE.SCN",&C000
+```
+
+### BASIC Files (.BAS)
+
+BASIC programs are added as ASCII files.
+
+```bash
+BASIC_PATH="bas"
+```
+
+All `.bas` files in the directory are added to DSK.
+
+**From CPC:**
+```basic
+LOAD"LOADER.BAS"
+RUN
+```
+
+### RAW Files
+
+Raw binary files without AMSDOS headers.
+
+```bash
+RAW_PATH="raw"
+```
+
+Useful for:
+- Music data
+- Level data
+- Tile maps
+- Graphics resources
+
+## DSK Contents Example
+
+Typical game DSK layout:
+
+```bash
+═══════════════════════════════════════
+  Contenido del DSK
+═══════════════════════════════════════
+
+0: 8BP0    .BIN  [ st: 0 extend: 0 data pages: 128 ]
+   Load: 0x5C30, Exec: 0x5C30, Size: 19120 bytes
+   
+1: TITLE   .SCN  [ st: 0 extend: 0 data pages: 128 ]
+   Load: 0xC000, Exec: 0xC000, Size: 16384 bytes
+   
+2: GAME    .SCN  [ st: 0 extend: 0 data pages: 128 ]
+   Load: 0xC000, Exec: 0xC000, Size: 16384 bytes
+   
+3: LOADER  .BAS  [ st: 0 extend: 0 data pages: 3 ]
+   Size: 512 bytes
+   
+4: MUSIC   .BIN  [ st: 0 extend: 0 data pages: 32 ]
+   Size: 4096 bytes
+
+Total: 5 files, ~56KB used
+```
+
+## Manual DSK Operations
+
+DevCPC includes `dsk.py` for manual operations:
+
+```bash
+# View DSK catalog
+python3 ~/.DevCPC/tools/abasm/src/dsk.py dist/my-game.dsk --dir
+
+# Add binary file
+python3 ~/.DevCPC/tools/abasm/src/dsk.py dist/my-game.dsk \
+  --put-bin myfile.bin --load-addr 0x4000 --start-addr 0x4000
+
+# Add ASCII/BASIC file
+python3 ~/.DevCPC/tools/abasm/src/dsk.py dist/my-game.dsk \
+  --put-ascii myprogram.bas
+
+# Extract file from DSK
+python3 ~/.DevCPC/tools/abasm/src/dsk.py dist/my-game.dsk \
+  --get-file "LOADER.BAS" output.bas
+```
+
+## DSK Capacity
+
+**Standard CPC DSK:**
+- Total size: 178KB (178,688 bytes)
+- Usable space: ~170KB (depends on files)
+- Maximum files: ~64 (depends on directory)
+
+**Data pages:**
+- Each page = 1KB
+- Files use multiple pages
+- Example: 16KB file = 16 pages
+
+## Using DSK Files
+
+### In Emulator
+
+```bash
+# Automatic with DevCPC
+devcpc run
+
+# Manual with RetroVirtualMachine
+open "Retro Virtual Machine 2.app" dist/my-game.dsk
+```
+
+### From BASIC on CPC
+
+```basic
+10 REM List files
+20 CAT
+
+30 REM Load and run BASIC
+40 LOAD"LOADER.BAS"
+50 RUN
+
+60 REM Load binary
+70 LOAD"8BP0.BIN"
+80 CALL &5C30
+
+90 REM Load screen
+100 MODE 0
+110 LOAD"TITLE.SCN",&C000
+```
+
+### Auto-execution
+
+Create a `DISC` file to auto-run on boot:
+
+```basic
+' disc.bas
+10 MODE 1
+20 LOAD"LOADER.BAS"
+30 RUN
+```
+
+Add to DSK as `DISC`:
+```bash
+python3 dsk.py my-game.dsk --put-ascii disc.bas --name "DISC"
+```
+
+## Complete Example
+
+### Project Configuration
+
+```bash
+# devcpc.conf
+PROJECT_NAME="platformer"
+BUILD_LEVEL=2
+
+# Paths
+ASM_PATH="asm/make_all_mygame.asm"
+BASIC_PATH="bas"
+RAW_PATH="raw"
+LOADER_SCREEN="assets/screen"
+
+# Output
+DSK="${PROJECT_NAME}.dsk"
+DIST_DIR="dist"
+```
+
+### File Structure
+
+```
+platformer/
+├── asm/
+│   └── make_all_mygame.asm
+├── bas/
+│   ├── loader.bas
+│   └── menu.bas
+├── raw/
+│   └── levels.dat
+├── assets/
+│   └── screen/
+│       └── title.png
+└── devcpc.conf
+```
+
+### Build Result
+
+```bash
+devcpc build
+
+# Generated DSK:
+dist/platformer.dsk
+  ├── 8BP2.BIN    (17820 bytes)  # Compiled game
+  ├── TITLE.SCN   (16384 bytes)  # Title screen
+  ├── LOADER.BAS  (512 bytes)    # Loader
+  ├── MENU.BAS    (256 bytes)    # Menu
+  └── LEVELS.DAT  (2048 bytes)   # Level data
+
+Total: ~37KB used, ~140KB free
+```
+
+### BASIC Loader
+
+```basic
+' loader.bas
+10 MODE 0
+20 LOAD"TITLE.SCN",&C000
+30 INK 0,0: INK 1,24: INK 2,6
+40 PAUSE 100
+50 MEMORY 24799
+60 LOAD"8BP2.BIN"
+70 CALL &5C30
+```
+
+## DSK vs CDT vs CPR
+
+DevCPC can generate three distribution formats:
+
+| Format | Medium | Speed | Use Case | Size |
+|--------|--------|-------|----------|------|
+| **DSK** | Disk | Fast | Emulators, M4 | 178KB |
+| **CDT** | Tape | Slow | Retro feel | Variable |
+| **CPR** | Cartridge | Instant | GX-4000/Plus | 512KB max |
+
+### When to Use DSK
+
+✅ **Use DSK for:**
+- Emulator testing
+- M4 Board deployment
+- Random file access
+- Frequent file updates
+- Multiple programs
+
+❌ **Consider alternatives:**
+- CDT: For authentic tape experience
+- CPR: For GX-4000/Plus cartridges
+
+## Troubleshooting
+
+### DSK Creation Failed
+
+**Error: Python not found**
+```bash
+python3 --version
+# Install if needed
+```
+
+**Error: dsk.py missing**
+```bash
+ls ~/.DevCPC/tools/abasm/src/dsk.py
+# Reinstall DevCPC if missing
+```
+
+### File Not Added
+
+**Binary not on DSK:**
+- Check compilation succeeded
+- Verify file exists in `obj/`
+- Check for error messages in build log
+
+**BASIC not on DSK:**
+- Verify `BASIC_PATH` is set
+- Check `.bas` files exist
+- Ensure files have correct extension
+
+### DSK Full
+
+**Error: No space on disk**
+- Remove unused files
+- Compress graphics
+- Split into multiple DSKs
+- Use higher BUILD_LEVEL (smaller binary)
+
+### Load Errors on CPC
+
+**File not found:**
+- Check filename (8.3 format)
+- Use uppercase: `LOAD"FILE.BIN"`
+- Verify file on DSK: `CAT`
+
+**Wrong load address:**
+- Check map file for correct address
+- Verify MEMORY statement in BASIC
+- Ensure no memory conflicts
+
+## Best Practices
+
+1. **Keep DSK organized** - Use clear filenames
+2. **Test frequently** - Use `devcpc run` to test
+3. **Check catalog** - Verify all files added
+4. **Document addresses** - Note load/exec addresses
+5. **Backup DSKs** - Save working versions
+6. **Monitor size** - Keep under 170KB
+
+## See Also
+
+- [Compiling Code](/guides/compiling-code) - How files are generated
+- [Tape Images](/guides/tape-images) - CDT alternative
+- [Cartridge Images](/guides/cartridge-images) - CPR format
+- [Emulator Integration](/guides/emulator-integration) - Testing DSK files

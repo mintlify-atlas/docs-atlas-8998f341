@@ -1,0 +1,313 @@
+---
+title: 'devcpc run'
+description: 'Execute the project in RetroVirtualMachine emulator'
+icon: 'play'
+---
+
+## Overview
+
+The `devcpc run` command launches your project in RetroVirtualMachine emulator, supporting both DSK (disk) and CDT (tape) media with automatic detection and flexible override options.
+
+## Syntax
+
+```bash
+devcpc run [options]
+```
+
+## Options
+
+<ParamField path="--dsk" type="flag">
+  Force execution from DSK (disk). Ignores `RUN_MODE` configuration.
+</ParamField>
+
+<ParamField path="--cdt" type="flag">
+  Force execution from CDT (tape). Ignores `RUN_MODE` configuration.
+</ParamField>
+
+## Configuration
+
+Configure in `devcpc.conf`:
+
+```bash
+# Emulator path
+RVM_PATH="/Applications/Retro Virtual Machine 2.app/Contents/MacOS/Retro Virtual Machine 2"
+
+# CPC model (464, 664, or 6128)
+CPC_MODEL=464
+
+# File to auto-execute (DSK only)
+RUN_FILE="8BP0.BIN"
+
+# Execution mode: auto, dsk, or cdt
+RUN_MODE="auto"
+```
+
+### Platform-Specific RVM_PATH
+
+<CodeGroup>
+
+```bash macOS
+RVM_PATH="/Applications/Retro Virtual Machine 2.app/Contents/MacOS/Retro Virtual Machine 2"
+```
+
+```bash Linux
+RVM_PATH="/usr/local/bin/RetroVirtualMachine"
+```
+
+```bash Windows WSL
+RVM_PATH="/mnt/c/Program Files/RetroVirtualMachine/RetroVirtualMachine.exe"
+```
+
+</CodeGroup>
+
+## Execution Modes
+
+### RUN_MODE: auto
+
+Automatically detects which media to use:
+
+- If `CDT` and `CDT_FILES` are configured and CDT exists → uses **CDT**
+- Otherwise → uses **DSK**
+
+```bash
+RUN_MODE="auto"
+devcpc run  # Auto-detects
+```
+
+### RUN_MODE: dsk
+
+Always uses DSK (disk):
+
+- Mounts DSK image
+- Auto-executes `RUN_FILE` if configured
+- Direct file access
+
+```bash
+RUN_MODE="dsk"
+devcpc run  # Always uses DSK
+```
+
+### RUN_MODE: cdt
+
+Always uses CDT (tape):
+
+- Mounts CDT image
+- Auto-plays tape
+- Executes `RUN"`
+- Sequential loading
+
+```bash
+RUN_MODE="cdt"
+devcpc run  # Always uses CDT
+```
+
+## Override Options
+
+Command-line flags override `RUN_MODE`:
+
+```bash
+# Force DSK (ignores RUN_MODE)
+devcpc run --dsk
+
+# Force CDT (ignores RUN_MODE)
+devcpc run --cdt
+
+# Use configured RUN_MODE
+devcpc run
+```
+
+## DSK Execution
+
+When running from DSK:
+
+```bash
+# Command sent to emulator
+-b cpc464 -i disk.dsk -c 'run"8BP0.BIN\n'
+```
+
+**Behavior:**
+- Mounts DSK as drive A:
+- Auto-executes `RUN_FILE` if configured
+- Fast random access to files
+- Works on all CPC models
+
+## CDT Execution
+
+When running from CDT:
+
+### CPC 464 (Tape-only model)
+
+```bash
+# Command sent to emulator
+-b cpc464 -i tape.cdt -c 'run"\n' -p
+```
+
+**Behavior:**
+- Mounts CDT as tape
+- `-p` flag auto-plays tape
+- Executes `RUN"`
+- Sequential loading from tape
+
+### CPC 664/6128 (Disk models)
+
+```bash
+# Command sent to emulator
+-b cpc6128 -i tape.cdt -c '|tape\nrun"\n' -p
+```
+
+**Behavior:**
+- Uses `|TAPE` command to switch from disk to tape
+- Then executes `RUN"`
+- `-p` flag auto-plays tape
+- Sequential loading from tape
+
+## Output Example
+
+```
+═══════════════════════════════════════
+  Ejecutar en RetroVirtualMachine
+═══════════════════════════════════════
+
+ℹ Emulador: /Applications/Retro Virtual Machine 2.app/Contents/MacOS/Retro Virtual Machine 2
+ℹ Modelo:   464
+ℹ Modo:     auto (DSK)
+ℹ Archivo:  dist/mi-juego.dsk
+ℹ Ejecutar: 8BP0.BIN
+
+⚠ Cerrando sesión anterior de RetroVirtualMachine...
+
+→ Iniciando emulador...
+✓ RetroVirtualMachine iniciado
+```
+
+## Session Management
+
+The command automatically:
+- Detects running RetroVirtualMachine sessions
+- Closes previous sessions
+- Launches new session with correct media
+- Runs in background
+
+## Media Comparison
+
+| Feature | DSK (Disk) | CDT (Tape) |
+|---------|------------|------------|
+| **Speed** | Fast (instant access) | Slow (sequential) |
+| **Loading** | Direct file access | Must load in order |
+| **Authenticity** | Modern convenience | Period-accurate |
+| **File Order** | Doesn't matter | Critical |
+| **Auto-execute** | Via `RUN_FILE` | Via `RUN"` |
+| **CPC Models** | All models | All models (auto-adapts) |
+
+## Workflow Examples
+
+### Quick Test (DSK)
+
+```bash
+devcpc build
+devcpc run --dsk
+```
+
+### Tape Testing (CDT)
+
+```bash
+# Configure CDT in devcpc.conf
+CDT="${PROJECT_NAME}.cdt"
+CDT_FILES="loader.bas 8BP0.bin"
+
+devcpc build
+devcpc run --cdt
+```
+
+### Auto Mode
+
+```bash
+# Detects DSK or CDT automatically
+RUN_MODE="auto"
+devcpc build
+devcpc run
+```
+
+### Development Loop
+
+```bash
+# Edit code
+vim asm/make_all_mygame.asm
+
+# Build and run
+devcpc build && devcpc run
+```
+
+## Requirements
+
+<Warning>
+  **Important:** Only **RetroVirtualMachine v2.0 BETA-1 R7 (10/07/2019)** is supported, as it's the only version with development features enabled.
+  
+  Download from: [RetroVirtualMachine](https://www.retrovirtualmachine.org/blog/future/)
+</Warning>
+
+## Error Handling
+
+```bash
+# RVM_PATH not configured
+devcpc run
+# Error: RVM_PATH no está configurado en devcpc.conf
+
+# Emulator not found
+devcpc run
+# Error: RetroVirtualMachine no encontrado en: /path/to/rvm
+
+# DSK not found
+devcpc run --dsk
+# Error: DSK no encontrado: dist/project.dsk
+# ℹ Ejecuta 'devcpc build' primero
+
+# CDT not configured
+devcpc run --cdt
+# Error: CDT no encontrado: dist/project.cdt
+# ℹ Configura CDT y CDT_FILES en devcpc.conf
+```
+
+## CPC Model Selection
+
+Choose the appropriate model:
+
+| Model | Type | Features | Use Case |
+|-------|------|----------|----------|
+| **464** | Tape-only | 64KB RAM, no disk | Tape games, authentic experience |
+| **664** | Disk | 64KB RAM, disk drive | Disk games, faster loading |
+| **6128** | Disk | 128KB RAM, disk drive | Advanced games, banking |
+
+```bash
+# CPC 464
+CPC_MODEL=464
+
+# CPC 6128
+CPC_MODEL=6128
+```
+
+## Background Execution
+
+The emulator runs in background:
+
+```bash
+devcpc run
+# Emulator opens in new window
+# Terminal remains available
+```
+
+To close:
+
+```bash
+# Closes automatically on next run
+devcpc run
+
+# Or close manually
+pkill -9 "Retro Virtual Machine"
+```
+
+## Related Commands
+
+- [`devcpc build`](/cli/build) - Build before running
+- [`devcpc clean`](/cli/clean) - Clean before rebuilding
+- [`devcpc info`](/cli/info) - Show emulator configuration

@@ -1,0 +1,258 @@
+---
+title: 'devcpc clean'
+description: 'Remove generated files from the project'
+icon: 'broom'
+---
+
+## Overview
+
+The `devcpc clean` command removes all generated files from your project, including intermediate compilation files and final output files.
+
+## Syntax
+
+```bash
+devcpc clean
+```
+
+## What Gets Removed
+
+### obj/ Directory (Intermediate Files)
+
+Removes all intermediate compilation files:
+
+- `*.bin` - Compiled binaries
+- `*.lst` - Assembly listings
+- `*.map` - Memory maps
+- `*.ihx` - Intel HEX files (C)
+- `*.lk` - Linker files
+- `*.noi` - Debug info
+- `*.rel` - Relocatable files
+- `*.sym` - Symbol files
+- `*.scn` - Screen files
+- `*.scn.info` - Palette info
+
+### dist/ Directory (Output Files)
+
+Removes all final output files:
+
+- `*.dsk` - Disk images
+- `*.cdt` - Tape images
+- `*.cpr` - Cartridge ROMs
+
+### ASM Backup Files
+
+Removes backup files created during compilation:
+
+- `*.backup` - ABASM backups
+- `*.backup_build` - Build backups
+- `*.bak` - General backups
+- `*.BAK` - General backups
+
+## Output Example
+
+```
+═══════════════════════════════════════
+  Limpiar Proyecto
+═══════════════════════════════════════
+
+→ Limpiando obj/...
+✓ obj/ eliminado
+
+→ Limpiando dist/...
+✓ dist/ eliminado
+
+→ Limpiando backups en ASM/...
+✓ 3 archivo(s) de backup eliminados
+
+✓ Limpieza completada
+```
+
+## When to Use Clean
+
+### Before Fresh Build
+
+Clean before building to ensure all files are regenerated:
+
+```bash
+devcpc clean
+devcpc build
+```
+
+### After Configuration Changes
+
+Clean when changing major configuration:
+
+```bash
+# Edit devcpc.conf (change BUILD_LEVEL, paths, etc.)
+devcpc clean
+devcpc build
+```
+
+### Disk Space Management
+
+Clean to free up disk space:
+
+```bash
+devcpc clean
+# Removes all generated files, keeps only source code
+```
+
+### Troubleshooting Build Issues
+
+Clean when experiencing build problems:
+
+```bash
+devcpc clean
+devcpc validate
+devcpc build
+```
+
+## What Stays
+
+The following files/directories are **NOT** removed:
+
+- `devcpc.conf` - Project configuration
+- `README.md` - Documentation
+- `.gitignore` - Git configuration
+- `ASM/` - Source code
+- `bas/` - BASIC files
+- `src/` - Source code
+- `assets/` - PNG sprites and screens
+- `raw/` - Raw binary files
+- `c/` - C source code
+- `music/` - Music files
+
+**Auto-generated sprites:** The `sprites.asm` file in `ASM/` or `src/` is preserved (it will be regenerated on next build if needed).
+
+## Clean vs Build
+
+| Command | Purpose | When to Use |
+|---------|---------|-------------|
+| `clean` | Remove generated files | Before fresh build, troubleshooting |
+| `build` | Compile project | After code changes |
+| `clean && build` | Fresh compilation | After major config changes |
+
+## Clean in Workflows
+
+### Development Workflow
+
+```bash
+# Edit code
+vim asm/make_all_mygame.asm
+
+# Build (incremental)
+devcpc build
+
+# Test
+devcpc run
+```
+
+### Clean Build Workflow
+
+```bash
+# Major changes
+vim devcpc.conf
+
+# Clean and rebuild
+devcpc clean && devcpc build
+
+# Test
+devcpc run
+```
+
+### Release Workflow
+
+```bash
+# Clean everything
+devcpc clean
+
+# Validate
+devcpc validate
+
+# Fresh build
+devcpc build
+
+# Test
+devcpc run
+
+# Package for release
+cp dist/*.dsk releases/
+cp dist/*.cdt releases/
+```
+
+## Size Information
+
+Typical disk space usage:
+
+| Project Type | obj/ Size | dist/ Size | Total |
+|--------------|-----------|------------|-------|
+| **Small** (BASIC only) | 10-50 KB | 100-200 KB | ~250 KB |
+| **Medium** (8BP + graphics) | 100-500 KB | 200-400 KB | ~900 KB |
+| **Large** (8BP + C + CDT + CPR) | 500 KB - 2 MB | 400 KB - 1 MB | ~3 MB |
+
+## Error Handling
+
+```bash
+# Not in a DevCPC project
+devcpc clean
+# Error: No estás en un proyecto DevCPC
+
+# Nothing to clean
+devcpc clean
+# ℹ No hay nada que limpiar
+
+# Directories already removed
+devcpc clean
+devcpc clean
+# ℹ No hay nada que limpiar
+```
+
+## Git Integration
+
+The `.gitignore` file created by `devcpc new` already ignores:
+
+```gitignore
+# Generated files
+obj/
+dist/
+*.bin
+*.lst
+*.map
+
+# Backups
+*.backup
+*.bak
+```
+
+So `obj/` and `dist/` are never committed to Git, and `devcpc clean` removes exactly what Git ignores.
+
+## Automation
+
+You can automate clean in scripts:
+
+```bash
+#!/bin/bash
+# build-release.sh
+
+set -e
+
+echo "Cleaning..."
+devcpc clean
+
+echo "Validating..."
+devcpc validate
+
+echo "Building..."
+devcpc build
+
+echo "Testing..."
+devcpc run --dsk
+
+echo "Done!"
+```
+
+## Related Commands
+
+- [`devcpc build`](/cli/build) - Build after cleaning
+- [`devcpc validate`](/cli/validate) - Validate before building
+- [`devcpc new`](/cli/new) - Create new clean project

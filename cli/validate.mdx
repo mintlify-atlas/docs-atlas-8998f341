@@ -1,0 +1,373 @@
+---
+title: 'devcpc validate'
+description: 'Validate project configuration before building'
+icon: 'check-circle'
+---
+
+## Overview
+
+The `devcpc validate` command performs pre-build validation of your project, checking configuration, file paths, source files, and required tools.
+
+## Syntax
+
+```bash
+devcpc validate
+```
+
+## Validation Steps
+
+The command performs the following checks:
+
+1. **Configuration validation** - Verifies required variables
+2. **Path validation** - Checks all configured paths exist
+3. **Source file validation** - Verifies source files are present
+4. **Tool validation** - Checks required tools are installed
+
+## Output Example (Success)
+
+```
+═══════════════════════════════════════
+  Validar Proyecto: mi-juego
+═══════════════════════════════════════
+
+→ Validando configuración...
+✓ PROJECT_NAME: mi-juego
+✓ BUILD_LEVEL: 0 (Todas las funcionalidades)
+
+→ Validando rutas...
+✓ ASM_PATH: asm/make_all_mygame.asm
+✓   make_all_mygame.asm encontrado
+✓ BASIC_PATH: bas (2 archivo(s) .bas)
+✓ RAW_PATH: raw (3 archivo(s))
+
+→ Validando herramientas...
+✓ Python 3 instalado
+✓ SDCC instalado
+
+═══════════════════════════════════════
+  Resumen de Validación
+═══════════════════════════════════════
+
+✓ Proyecto válido - Sin errores ni advertencias
+```
+
+## Output Example (Warnings)
+
+```
+═══════════════════════════════════════
+  Validar Proyecto: test-project
+═══════════════════════════════════════
+
+→ Validando configuración...
+✓ PROJECT_NAME: test-project
+✓ BUILD_LEVEL: 0 (Todas las funcionalidades)
+
+→ Validando rutas...
+✓ BASIC_PATH: bas (1 archivo(s) .bas)
+⚠ No hay código fuente configurado (ASM, BASIC o C)
+
+→ Validando herramientas...
+✓ Python 3 instalado
+⚠ SDCC no instalado (necesario para compilar C)
+
+═══════════════════════════════════════
+  Resumen de Validación
+═══════════════════════════════════════
+
+⚠ 2 advertencia(s) encontrada(s)
+```
+
+## Output Example (Errors)
+
+```
+═══════════════════════════════════════
+  Validar Proyecto: broken-project
+═══════════════════════════════════════
+
+→ Validando configuración...
+✗ PROJECT_NAME no está definido
+✗ BUILD_LEVEL debe ser 0-4 para proyectos 8BP (actual: 7)
+
+→ Validando rutas...
+✗ ASM_PATH no existe: asm/missing.asm
+✗ C_PATH no existe: nonexistent
+
+→ Validando herramientas...
+✗ Python 3 no encontrado
+
+═══════════════════════════════════════
+  Resumen de Validación
+═══════════════════════════════════════
+
+✗ 5 error(es) encontrado(s)
+```
+
+## Validation Categories
+
+### Configuration Validation
+
+<AccordionGroup>
+  <Accordion title="PROJECT_NAME">
+    - **Required:** Yes
+    - **Type:** String
+    - **Error if:** Not defined or empty
+    
+    ```bash
+    ✓ PROJECT_NAME: mi-juego
+    ```
+  </Accordion>
+
+  <Accordion title="BUILD_LEVEL">
+    - **Required:** Only for 8BP projects
+    - **Type:** Integer (0-4)
+    - **Error if:** Not 0-4 for 8BP projects
+    - **Optional:** For non-8BP projects
+    
+    ```bash
+    ✓ BUILD_LEVEL: 0 (Todas las funcionalidades)
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Path Validation
+
+<AccordionGroup>
+  <Accordion title="ASM_PATH">
+    - **Checks:** File exists (8BP) or directory exists (pure ASM)
+    - **Verifies:** `make_all_mygame.asm` if 8BP project
+    - **Error if:** Path doesn't exist
+    
+    ```bash
+    ✓ ASM_PATH: asm/make_all_mygame.asm
+    ✓   make_all_mygame.asm encontrado
+    ```
+  </Accordion>
+
+  <Accordion title="BASIC_PATH">
+    - **Checks:** Directory exists
+    - **Counts:** Number of `.bas` files
+    - **Error if:** Directory doesn't exist
+    
+    ```bash
+    ✓ BASIC_PATH: bas (3 archivo(s) .bas)
+    ```
+  </Accordion>
+
+  <Accordion title="RAW_PATH">
+    - **Checks:** Directory exists
+    - **Counts:** Number of files
+    - **Error if:** Directory doesn't exist
+    
+    ```bash
+    ✓ RAW_PATH: raw (5 archivo(s))
+    ```
+  </Accordion>
+
+  <Accordion title="C_PATH">
+    - **Checks:** Directory exists
+    - **Verifies:** `C_SOURCE` file exists
+    - **Error if:** Directory doesn't exist
+    - **Warning if:** `C_SOURCE` not found
+    
+    ```bash
+    ✓ C_PATH: c
+    ✓   ciclo.c encontrado
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Tool Validation
+
+<AccordionGroup>
+  <Accordion title="Python 3">
+    - **Required:** Yes (for all projects)
+    - **Command:** `python3 --version`
+    - **Error if:** Not installed
+    
+    ```bash
+    ✓ Python 3 instalado
+    ```
+  </Accordion>
+
+  <Accordion title="SDCC">
+    - **Required:** Only if `C_PATH` configured
+    - **Command:** `sdcc --version`
+    - **Warning if:** Not installed but C code configured
+    
+    ```bash
+    ✓ SDCC instalado
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Validation Rules
+
+### 8BP Project Detection
+
+A project is detected as 8BP if:
+- `ASM_PATH` points to a file named `make_all_mygame.asm`, OR
+- `ASM_PATH` is a directory containing `make_all_mygame.asm`
+
+For 8BP projects, `BUILD_LEVEL` is required.
+
+### Source Code Requirement
+
+At least one of these must be configured:
+- `ASM_PATH` (assembler code)
+- `BASIC_PATH` (BASIC files)
+- `C_PATH` + `C_SOURCE` (C code)
+
+Warning if none are configured:
+```
+⚠ No hay código fuente configurado (ASM, BASIC o C)
+```
+
+## Exit Codes
+
+| Exit Code | Meaning | Condition |
+|-----------|---------|-----------|
+| **0** | Success | No errors (warnings allowed) |
+| **1** | Failure | One or more errors found |
+
+```bash
+devcpc validate
+if [ $? -eq 0 ]; then
+    echo "Validation passed"
+    devcpc build
+else
+    echo "Validation failed"
+fi
+```
+
+## Use Cases
+
+### Pre-Build Validation
+
+Validate before building:
+
+```bash
+devcpc validate && devcpc build
+```
+
+### CI/CD Integration
+
+Use in continuous integration:
+
+```yaml
+# .github/workflows/build.yml
+steps:
+  - name: Validate
+    run: devcpc validate
+  
+  - name: Build
+    run: devcpc build
+```
+
+### New Project Setup
+
+Validate after creating project:
+
+```bash
+devcpc new my-game
+cd my-game
+devcpc validate
+```
+
+### Troubleshooting
+
+Find configuration issues:
+
+```bash
+devcpc validate
+# Fix reported errors
+vim devcpc.conf
+devcpc validate
+```
+
+### Pre-Release Check
+
+Final validation before release:
+
+```bash
+devcpc clean
+devcpc validate
+devcpc build
+devcpc run
+```
+
+## Common Validation Errors
+
+### Missing PROJECT_NAME
+
+```
+✗ PROJECT_NAME no está definido
+```
+
+**Fix:**
+```bash
+# In devcpc.conf
+PROJECT_NAME="my-game"
+```
+
+### Invalid BUILD_LEVEL
+
+```
+✗ BUILD_LEVEL debe ser 0-4 para proyectos 8BP (actual: 7)
+```
+
+**Fix:**
+```bash
+# In devcpc.conf
+BUILD_LEVEL=0  # Must be 0, 1, 2, 3, or 4
+```
+
+### Path Not Found
+
+```
+✗ ASM_PATH no existe: asm/missing.asm
+```
+
+**Fix:**
+```bash
+# Create the file
+touch asm/missing.asm
+
+# Or fix the path in devcpc.conf
+ASM_PATH="asm/make_all_mygame.asm"
+```
+
+### Python Not Installed
+
+```
+✗ Python 3 no encontrado
+```
+
+**Fix:**
+```bash
+# macOS
+brew install python3
+
+# Linux
+sudo apt-get install python3
+```
+
+## Validation vs Info
+
+| Command | Purpose | Checks |
+|---------|---------|--------|
+| `validate` | Verify correctness | Files exist, tools installed, config valid |
+| `info` | Show configuration | Display settings only |
+
+```bash
+# Show config
+devcpc info
+
+# Verify config is valid
+devcpc validate
+```
+
+## Related Commands
+
+- [`devcpc info`](/cli/info) - Display configuration
+- [`devcpc build`](/cli/build) - Build after validation
+- [`devcpc new`](/cli/new) - Create valid project

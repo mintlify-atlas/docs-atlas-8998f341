@@ -1,0 +1,314 @@
+---
+title: "Custom Workflows"
+description: "Extend DevCPC with custom build scripts and integrations"
+icon: "wand-magic-sparkles"
+---
+
+## Overview
+
+While DevCPC provides a complete build system, you can extend it with custom scripts, integrate additional tools, and create specialized workflows for your projects.
+
+## Custom Build Scripts
+
+Add pre/post-build scripts to your project:
+
+```bash
+#!/bin/bash
+# pre-build.sh - Run before devcpc build
+
+echo "Running custom pre-build tasks..."
+
+# Generate sprite data from external tool
+python3 tools/sprite-packer.py assets/sprites/ > ASM/packed_sprites.asm
+
+# Validate music files
+for music in assets/music/*.wyz; do
+    echo "Validating $music"
+    # Custom validation logic
+done
+
+echo "Pre-build complete"
+```
+
+```bash
+#!/bin/bash
+# post-build.sh - Run after devcpc build
+
+echo "Running custom post-build tasks..."
+
+# Generate release archive
+cd dist/
+zip ../releases/my-game-$(date +%Y%m%d).zip *.dsk *.cdt *.cpr
+
+# Update version info
+echo "Build $(date)" > ../build-info.txt
+
+echo "Post-build complete"
+```
+
+Integrate with DevCPC:
+
+```bash
+# Custom build command
+./pre-build.sh && devcpc build && ./post-build.sh
+```
+
+## Makefile Integration
+
+Create a `Makefile` for complex workflows:
+
+```makefile
+# Makefile
+
+PROJECT = my-game
+DIST_DIR = dist
+RELEASE_DIR = releases
+
+.PHONY: all build clean test release
+
+all: build
+
+build:
+	@echo "Building $(PROJECT)..."
+	@./pre-build.sh
+	@devcpc build
+	@./post-build.sh
+
+clean:
+	@echo "Cleaning..."
+	@devcpc clean
+	@rm -rf $(RELEASE_DIR)/*.zip
+
+test: build
+	@echo "Running tests..."
+	@devcpc validate
+	@python3 tests/integration_test.py
+
+release: build test
+	@echo "Creating release..."
+	@mkdir -p $(RELEASE_DIR)
+	@cd $(DIST_DIR) && zip ../$(RELEASE_DIR)/$(PROJECT)-v$(VERSION).zip *
+	@echo "Release created: $(RELEASE_DIR)/$(PROJECT)-v$(VERSION).zip"
+
+run: build
+	@devcpc run
+
+watch:
+	@echo "Watching for changes..."
+	@while true; do \
+		inotifywait -e modify -r ASM/ bas/ assets/; \
+		make build; \
+	done
+```
+
+Usage:
+
+```bash
+make build    # Build project
+make clean    # Clean outputs  
+make test     # Build and test
+make release  # Create release package
+make watch    # Watch for changes and rebuild
+```
+
+## CI/CD Integration
+
+Integrate DevCPC into GitHub Actions:
+
+```yaml .github/workflows/build.yml
+name: Build CPC Game
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y python3 python3-pip
+        pip3 install Pillow
+    
+    - name: Install DevCPC
+      run: |
+        curl -fsSL https://destroyer.me/devcpc | bash
+        echo "$HOME/.DevCPC/bin" >> $GITHUB_PATH
+    
+    - name: Validate project
+      run: devcpc validate
+    
+    - name: Build project
+      run: devcpc build
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: game-images
+        path: |
+          dist/*.dsk
+          dist/*.cdt
+          dist/*.cpr
+    
+    - name: Create release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: dist/*
+```
+
+## Custom Graphics Pipeline
+
+Extend graphics conversion with custom tools:
+
+```python tools/advanced_sprite_converter.py
+#!/usr/bin/env python3
+import sys
+from PIL import Image
+
+def convert_sprite_with_optimization(png_file, output_asm):
+    """Convert PNG with custom optimization"""
+    img = Image.open(png_file)
+    
+    # Custom palette optimization
+    palette = optimize_palette(img)
+    
+    # Generate optimized ASM
+    with open(output_asm, 'w') as f:
+        f.write("; Optimized sprite\n")
+        f.write(f"; Source: {png_file}\n")
+        # ... custom conversion logic
+    
+    print(f"Converted {png_file} -> {output_asm}")
+
+if __name__ == "__main__":
+    convert_sprite_with_optimization(sys.argv[1], sys.argv[2])
+```
+
+Integrate into build:
+
+```bash pre-build.sh
+# Use custom sprite converter
+for sprite in assets/sprites/*.png; do
+    python3 tools/advanced_sprite_converter.py "$sprite" "ASM/sprites/$(basename $sprite .png).asm"
+done
+```
+
+## Version Control Hooks
+
+Create Git hooks for automatic validation:
+
+```bash .git/hooks/pre-commit
+#!/bin/bash
+# Validate before commit
+
+echo "Running pre-commit validation..."
+
+# Check if in DevCPC project
+if [ ! -f devcpc.conf ]; then
+    exit 0
+fi
+
+# Validate configuration
+if ! devcpc validate > /dev/null 2>&1; then
+    echo "Error: Project validation failed"
+    echo "Run 'devcpc validate' to see details"
+    exit 1
+fi
+
+echo "Validation passed"
+exit 0
+```
+
+## Multi-Project Workspace
+
+Manage multiple CPC projects:
+
+```bash
+#!/bin/bash
+# workspace.sh - Multi-project manager
+
+WORKSPACE_ROOT="$HOME/cpc-projects"
+
+case "$1" in
+    list)
+        echo "CPC Projects:"
+        ls -1 "$WORKSPACE_ROOT"
+        ;;
+    
+    build)
+        PROJECT="$2"
+        cd "$WORKSPACE_ROOT/$PROJECT"
+        echo "Building $PROJECT..."
+        devcpc build
+        ;;
+    
+    build-all)
+        for project in "$WORKSPACE_ROOT"/*; do
+            if [ -f "$project/devcpc.conf" ]; then
+                echo "Building $(basename $project)..."
+                (cd "$project" && devcpc build)
+            fi
+        done
+        ;;
+    
+    *)
+        echo "Usage: $0 {list|build PROJECT|build-all}"
+        exit 1
+        ;;
+esac
+```
+
+## Testing Framework
+
+Create automated tests:
+
+```python tests/integration_test.py
+#!/usr/bin/env python3
+import subprocess
+import os
+
+def test_build():
+    """Test that project builds successfully"""
+    result = subprocess.run(['devcpc', 'build'], 
+                          capture_output=True, text=True)
+    assert result.returncode == 0, f"Build failed: {result.stderr}"
+    print("✓ Build test passed")
+
+def test_dsk_created():
+    """Test that DSK file is created"""
+    assert os.path.exists('dist/my-game.dsk'), "DSK not created"
+    assert os.path.getsize('dist/my-game.dsk') > 0, "DSK is empty"
+    print("✓ DSK creation test passed")
+
+def test_validate():
+    """Test project validation"""
+    result = subprocess.run(['devcpc', 'validate'],
+                          capture_output=True, text=True)
+    assert result.returncode == 0, "Validation failed"
+    print("✓ Validation test passed")
+
+if __name__ == '__main__':
+    test_validate()
+    test_build()
+    test_dsk_created()
+    print("\nAll tests passed!")
+```
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Configuration" icon="gear" href="/concepts/configuration">
+    Configure DevCPC for your workflow
+  </Card>
+  <Card title="VSCode Extension" icon="code" href="/tools/vscode-extension">
+    Integrate DevCPC with VS Code
+  </Card>
+</CardGroup>

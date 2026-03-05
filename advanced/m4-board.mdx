@@ -1,0 +1,156 @@
+---
+title: "M4 Board Support"
+description: "Test on real Amstrad CPC hardware with M4 Board"
+icon: "microchip"
+---
+
+## Overview
+
+The M4 Board is a hardware expansion for Amstrad CPC that provides SD card storage, ROM management, and advanced features. DevCPC is adding support for directly testing games on real hardware via M4 Board.
+
+<Warning>
+M4 Board support is currently **in development**. Full functionality will be available in a future DevCPC release.
+</Warning>
+
+## What is M4 Board?
+
+The M4 Board is a modern expansion card for Amstrad CPC computers that provides:
+
+- **SD card storage** - Load games and programs from SD card
+- **ROM emulation** - Store multiple ROMs and switch between them
+- **DMA transfers** - Fast data loading
+- **Network capabilities** - WiFi connectivity (on some models)
+- **Real-time clock** - Date/time functions
+
+## Planned Features
+
+DevCPC will support:
+
+```bash
+# Deploy directly to M4 Board
+devcpc m4-deploy
+
+# Test on real hardware
+devcpc m4-test
+
+# Sync project to M4 SD card
+devcpc m4-sync
+```
+
+## Configuration (Upcoming)
+
+Future `devcpc.conf` settings:
+
+```bash
+# M4 Board configuration
+M4_ENABLED=1
+M4_MOUNT_PATH="/Volumes/M4SD"
+M4_DEPLOY_DIR="/games/my-project"
+
+# Auto-deploy after build
+M4_AUTO_DEPLOY=1
+```
+
+## Current Workaround
+
+Until M4 Board support is complete, manually copy files:
+
+<Steps>
+  <Step title="Build your project">
+    ```bash
+    devcpc build
+    ```
+  </Step>
+
+  <Step title="Mount M4 SD card">
+    Remove SD card from M4 Board and connect to your computer, or access via network if your M4 supports it.
+  </Step>
+
+  <Step title="Copy DSK files">
+    ```bash
+    # Copy DSK to M4 SD card
+    cp dist/*.dsk /Volumes/M4SD/games/
+    ```
+  </Step>
+
+  <Step title="Eject and test">
+    Safely eject SD card, insert back into M4 Board, and select your game from the M4 menu.
+  </Step>
+</Steps>
+
+## Development Status
+
+Track M4 Board support development:
+
+- ⏳ **Planned:** Direct USB/serial communication
+- ⏳ **Planned:** Network deployment (WiFi M4 models)
+- ⏳ **Planned:** Auto-run after deployment
+- ⏳ **Planned:** M4 ROM generation
+- ⏳ **Planned:** Hardware debugging support
+
+<Info>
+Want M4 Board support? Star the [DevCPC repository](https://github.com/destroyer-dcf/DevCPC) and open an issue to express interest.
+</Info>
+
+## M4 Board Resources
+
+Learn more about M4 Board:
+
+- [M4 Board Official Site](http://www.cpc-power.com/index.php?page=m4board)
+- [M4 Board Wiki](http://www.cpcwiki.eu/index.php/M4_Board)
+- [M4 Board User Manual](http://www.cpc-power.com/cpcarchives/index.php?page=articles&num=423)
+
+## Alternative: Real Hardware Testing
+
+For now, test on real CPC hardware using:
+
+### 1. Physical Disk Drive
+
+Use a Gotek drive or HxC floppy emulator:
+
+```bash
+# Build DSK
+devcpc build
+
+# Copy DSK to USB drive
+cp dist/my-game.dsk /Volumes/USB/
+```
+
+Insert USB drive into Gotek/HxC connected to your CPC.
+
+### 2. Serial Transfer
+
+Use CPCDiskXP or similar tools to transfer via serial cable:
+
+```bash
+# Build and transfer
+devcpc build
+cp dist/my-game.dsk ~/CPCTransfer/
+```
+
+### 3. Audio Cassette
+
+Generate CDT and record to tape:
+
+```bash
+# Enable CDT generation in devcpc.conf
+CDT="${PROJECT_NAME}.cdt"
+CDT_FILES="loader.bas 8BP0.bin"
+
+# Build CDT
+devcpc build
+
+# Use 2CDT or similar tool to create audio WAV
+# Record WAV to cassette tape
+```
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Emulator Integration" icon="computer" href="/guides/emulator-integration">
+    Test with RetroVirtualMachine
+  </Card>
+  <Card title="CDT Images" icon="cassette-tape" href="/guides/tape-images">
+    Create tape images for real hardware
+  </Card>
+</CardGroup>

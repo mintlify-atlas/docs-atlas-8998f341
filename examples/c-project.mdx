@@ -1,0 +1,617 @@
+---
+title: "C Project with 8BP"
+description: "Using SDCC to write C code with the 8BP library"
+---
+
+This example shows how to write game logic in C while using the 8BP library for graphics and sprite management.
+
+## Project Structure
+
+```
+c-project/
+├── devcpc.conf              # Project configuration
+├── src/
+│   ├── asm/                 # 8BP library files
+│   │   ├── make_all_mygame.asm
+│   │   ├── make_codigo_mygame.asm
+│   │   ├── make_graficos_mygame.asm
+│   │   └── images_mygame.asm
+│   ├── c/                   # C source code
+│   │   ├── main.c           # Main C program
+│   │   ├── 8BP_wrapper/     # C wrapper for 8BP
+│   │   │   └── 8BP.h
+│   │   └── mini_BASIC/      # Mini BASIC compatibility
+│   │       └── minibasic.h
+│   └── basic/               # BASIC loader
+│       └── loader.bas
+├── assets/
+│   ├── sprites/
+│   └── screen/
+├── obj/                     # Generated binaries
+└── dist/                    # DSK/CDT output
+```
+
+## Configuration (devcpc.conf)
+
+```bash
+# Project name
+PROJECT_NAME="c_game"
+
+# Build level (8BP library features)
+BUILD_LEVEL=0
+
+# Source paths
+ASM_PATH="src/asm/make_all_mygame.asm"
+BASIC_PATH="src/basic"
+C_PATH="src/c"
+C_SOURCE="main.c"            # C source file
+C_CODE_LOC=20000             # Load address for C code
+
+# Graphics
+MODE=0
+SPRITES_PATH="assets/sprites"
+SPRITES_OUT_FILE="src/asm/sprites.asm"
+LOADER_SCREEN="assets/screen"
+
+# Output
+OBJ_DIR="obj"
+DIST_DIR="dist"
+DSK="${PROJECT_NAME}.dsk"
+
+# Emulator
+RVM_PATH="/Applications/Retro Virtual Machine 2.app/Contents/MacOS/Retro Virtual Machine 2"
+CPC_MODEL=6128
+RUN_FILE="loader.bas"
+```
+
+## C Source Code (main.c)
+
+```c
+#include <stdlib.h>
+#include <string.h>
+#include "8BP_wrapper/8BP.h"
+#include "mini_BASIC/minibasic.h"
+
+// Global variables
+char player_x;
+char player_y;
+int score;
+
+// Function prototypes
+void init_game(void);
+void game_loop(void);
+void move_player(void);
+void check_collisions(void);
+
+int main()
+{
+    // Initialize game
+    init_game();
+    
+    // Main game loop
+    while(1) {
+        game_loop();
+    }
+    
+    return 0;
+}
+
+void init_game(void)
+{
+    // Initialize player position
+    player_x = 80;
+    player_y = 100;
+    score = 0;
+    
+    // Setup player sprite (sprite 0, image 1, 4 frames)
+    _8BP_setupsp_3(0, 1, 4);
+    
+    // Position player sprite
+    _8BP_locatesp_3(0, player_y, player_x);
+    
+    // Make sprite visible
+    _8BP_switchsp_1(0);  // Turn on
+}
+
+void game_loop(void)
+{
+    // Clear previous frame
+    _8BP_recsp_1(0);
+    
+    // Handle input and move player
+    move_player();
+    
+    // Check for collisions
+    check_collisions();
+    
+    // Update sprite position
+    _8BP_locatesp_3(0, player_y, player_x);
+    
+    // Draw sprite
+    _8BP_printsp_1(0);
+    
+    // Wait for vsync
+    __asm
+        call 48409  ; VSYNC firmware
+    __endasm;
+}
+
+void move_player(void)
+{
+    // Check keyboard using inline assembly
+    // Joy 0 = Up
+    __asm
+        ld bc, #0xF40E  ; Keyboard line
+        in a, (c)
+        bit 0, a
+        jr nz, skip_up
+        ; Move up
+        ld hl, #_player_y
+        dec (hl)
+    skip_up:
+    __endasm;
+    
+    // Use C for other directions
+    if (player_x < 150) {
+        player_x += 2;  // Move right
+    }
+    
+    // Boundary checking
+    if (player_y < 10) player_y = 10;
+    if (player_y > 190) player_y = 190;
+    if (player_x < 10) player_x = 10;
+    if (player_x > 150) player_x = 150;
+}
+
+void check_collisions(void)
+{
+    // Check collision with sprite 1
+    char collision = _8BP_colsp_2(0, 1);
+    
+    if (collision) {
+        score += 10;
+        
+        // Reposition collectible
+        _8BP_locatesp_3(1, 50, 100);
+    }
+}
+```
+
+## 8BP Wrapper Header (8BP.h)
+
+```c
+#ifndef _8BP_H
+#define _8BP_H
+
+// Sprite management
+extern void _8BP_setupsp_3(char sprite, char image, char frames) __z88dk_fastcall;
+extern void _8BP_locatesp_3(char sprite, char y, char x) __z88dk_fastcall;
+extern void _8BP_printsp_1(char sprite) __z88dk_fastcall;
+extern void _8BP_recsp_1(char sprite) __z88dk_fastcall;
+extern void _8BP_switchsp_1(char sprite) __z88dk_fastcall;
+
+// Collision detection
+extern char _8BP_colsp_2(char sprite1, char sprite2) __z88dk_fastcall;
+
+// Movement
+extern void _8BP_moverall_2(char dy, char dx) __z88dk_fastcall;
+extern void _8BP_moversp_3(char sprite, char dy, char dx) __z88dk_fastcall;
+
+// Map and scroll
+extern void _8BP_map2sp_2(char y, char x) __z88dk_fastcall;
+extern void _8BP_setlimits_4(char x1, char x2, char y1, char y2) __z88dk_fastcall;
+
+// Printing all sprites
+extern void _8BP_printspall(void);
+
+// Music
+extern void _8BP_music_on_1(char song) __z88dk_fastcall;
+extern void _8BP_music_off(void);
+
+#endif // _8BP_H
+```
+
+## Mini BASIC Header (minibasic.h)
+
+```c
+#ifndef _MINIBASIC_H
+#define _MINIBASIC_H
+
+// Firmware calls
+#define WAIT_VSYNC() __asm call 0xBD19 __endasm
+#define CLS() __asm call 0xBB6C __endasm
+#define PLOT(x,y) __asm ld de,#y : ld hl,#x : call 0xBBEA __endasm
+
+// Keyboard scancodes
+#define KEY_UP     0x40
+#define KEY_DOWN   0x41  
+#define KEY_LEFT   0x42
+#define KEY_RIGHT  0x43
+#define KEY_SPACE  0x47
+#define KEY_RETURN 0x46
+
+// Screen modes
+#define MODE_0  0
+#define MODE_1  1
+#define MODE_2  2
+
+// Common colors
+#define BLACK   0
+#define BLUE    1
+#define RED     6
+#define YELLOW  24
+#define WHITE   26
+
+#endif // _MINIBASIC_H
+```
+
+## BASIC Loader (loader.bas)
+
+```basic
+10 REM C + 8BP Game Loader
+20 MEMORY 23599
+30 LOAD"8BP0.BIN"
+40 CALL &6B78
+50 REM Setup screen
+60 MODE 0
+70 BORDER 0
+80 INK 0,0: INK 1,24: INK 2,6: INK 3,1
+90 REM Load C program
+100 LOAD"MAIN.BIN",20000
+110 REM Call C main function
+120 CALL &56B0
+130 REM If C returns, loop
+140 GOTO 140
+```
+
+### Loader Explanation
+
+**Line 20**: `MEMORY 23599`
+- Reserve memory for 8BP library (BUILD_LEVEL 0)
+- C code loads at 20000, safely above this
+
+**Line 30-40**: Load 8BP
+- `8BP0.BIN` contains the full library
+- `CALL &6B78` initializes 8BP
+
+**Line 100**: Load C Program
+- `MAIN.BIN` compiled from `main.c` by SDCC
+- Loads at address 20000 (C_CODE_LOC)
+
+**Line 120**: Execute C Code
+- `&56B0` is the address of `_main` (check .map file)
+- Control passes to C code
+
+## Build Process
+
+### Compile Everything
+
+```bash
+devcpc build
+```
+
+Output:
+```
+═══════════════════════════════════════
+  Compilar Proyecto: c_game
+═══════════════════════════════════════
+
+ℹ Build Level: 0 (Todas las funcionalidades)
+ℹ Memoria BASIC: MEMORY 23599
+
+→ Compilando ASM (8BP)...
+✓ 8BP0.bin generado (19120 bytes)
+
+→ Compilando C con SDCC...
+ℹ Source: main.c
+ℹ Load address: 20000 (0x4E20)
+✓ main.bin generado (2456 bytes)
+✓ Límite de memoria respetado (< 23999)
+
+→ Creando DSK...
+✓ DSK creado: dist/c_game.dsk
+
+Contenido:
+0: 8BP0    .BIN  [ st: 0 extend: 0 data pages: 128 ]
+1: LOADER  .BAS  [ st: 0 extend: 0 data pages: 3 ]
+2: MAIN    .BIN  [ st: 0 extend: 0 data pages: 20 ]
+
+✓ Proyecto compilado exitosamente
+```
+
+### Run in Emulator
+
+```bash
+devcpc run
+```
+
+## Memory Layout
+
+```
+&0000 - &3FFF  ROM (16KB)
+&4000 - &5BFF  Screen memory (8KB)
+&5C00 - &5DBF  8BP library loads here
+&5DC0 - &9FFF  Free space
+&A000 - &C000  More free space
+&4E20 (20000)  C program loads here (C_CODE_LOC)
+&C000 - &FFFF  Screen + system
+
+Memory limits:
+  8BP ends at:  23599 + 19120 = 42719 = &A6FF
+  C starts at:  20000 = &4E20
+  C must end before 8BP: &5C00 (23552)
+```
+
+### Critical: C Code Size Limit
+
+```bash
+# C code must not exceed this address
+MAX_C_END = 23552  # Start of 8BP library
+
+# If C_CODE_LOC = 20000
+# Maximum C size = 23552 - 20000 = 3552 bytes
+```
+
+If your C code is too large:
+
+1. **Optimize code**: Remove unused functions
+2. **Lower C_CODE_LOC**: 
+   ```bash
+   C_CODE_LOC=19000
+   # In BASIC: MEMORY 18999
+   ```
+3. **Use higher BUILD_LEVEL**: Smaller 8BP library
+   ```bash
+   BUILD_LEVEL=2  # Scroll games only
+   # MEMORY 24799, library is smaller
+   ```
+
+## SDCC Compilation Options
+
+DevCPC uses these SDCC flags:
+
+```bash
+sdcc -mz80 \
+  --code-loc C_CODE_LOC \
+  --data-loc 0 \
+  --no-std-crt0 \
+  -o main.ihx \
+  main.c
+```
+
+- `--code-loc`: Where to place code (C_CODE_LOC)
+- `--data-loc 0`: Data at address 0
+- `--no-std-crt0`: No standard C runtime (use custom)
+
+## Advanced: Custom CRT0
+
+For full control, create a custom startup file:
+
+### crt0.s (Custom Startup)
+
+```asm
+.module crt0
+.globl _main
+
+.area _HEADER (ABS)
+
+.org 0x4E20  ; C_CODE_LOC
+
+init:
+    ; Initialize stack
+    ld sp, #0xC000
+    
+    ; Clear BSS
+    ld hl, #s_DATA
+    ld de, #s_DATA+1
+    ld bc, #l_DATA-1
+    ld (hl), #0
+    ldir
+    
+    ; Call main
+    call _main
+    
+    ; Return to BASIC
+    ret
+
+.area _DATA
+.area _BSS
+```
+
+Compile with:
+```bash
+sdcc -mz80 --no-std-crt0 crt0.s main.c -o main.ihx
+```
+
+## Mixing C and Assembly
+
+### Inline Assembly in C
+
+```c
+void wait_vsync(void)
+{
+    __asm
+        call 0xBD19  ; Firmware VSYNC
+    __endasm;
+}
+
+char read_keyboard(void)
+{
+    __asm
+        ld bc, #0xF40E
+        in a, (c)
+        ld l, a
+    __endasm;
+}
+```
+
+### Calling C from Assembly
+
+```asm
+; In your ASM file
+extern _main
+
+start:
+    ; Setup
+    ld sp, #0xC000
+    
+    ; Call C function
+    call _main
+    
+    ret
+```
+
+### Calling Assembly from C
+
+```c
+// Declare external ASM function
+extern void draw_sprite(char x, char y) __z88dk_fastcall;
+
+// Call it
+draw_sprite(100, 80);
+```
+
+In assembly:
+```asm
+; draw_sprite function
+; Parameters: L = x, H = y
+_draw_sprite:
+    ; Your ASM code here
+    ret
+```
+
+## Debugging C Code
+
+### Print Debug Values
+
+```c
+#include <stdio.h>
+
+void debug_print(int value)
+{
+    char buffer[10];
+    sprintf(buffer, "%d", value);
+    
+    __asm
+        ld hl, #_buffer
+    print_loop:
+        ld a, (hl)
+        or a
+        ret z
+        call 0xBB5A  ; Print char
+        inc hl
+        jr print_loop
+    __endasm;
+}
+```
+
+### Check Memory Usage
+
+After build, check the .map file:
+
+```bash
+cat obj/main.map | grep "_main"
+```
+
+Output:
+```
+_main  0x56B0  ; Entry point address
+_end   0x5A12  ; End of C code
+```
+
+Calculate size:
+```
+Size = 0x5A12 - 0x56B0 = 0x362 = 866 bytes
+```
+
+## Common Pitfalls
+
+### 1. Memory Overlap
+
+**Problem**: C code overwrites 8BP library
+
+**Solution**: 
+```bash
+# Ensure C ends before 8BP starts
+C_CODE_LOC=19000
+# In BASIC:
+MEMORY 18999
+```
+
+### 2. Stack Collision
+
+**Problem**: Stack grows down into code
+
+**Solution**: Initialize stack above screen:
+```c
+int main()
+{
+    __asm
+        ld sp, #0xC000  ; Below screen memory
+    __endasm;
+    
+    // Your code
+}
+```
+
+### 3. Wrong Call Address
+
+**Problem**: `CALL &56B0` doesn't work
+
+**Solution**: Check .map file for actual `_main` address:
+```bash
+grep "_main" obj/main.map
+```
+
+## Performance Tips
+
+### 1. Use Fastcall Convention
+
+```c
+extern void fast_func(char a, char b) __z88dk_fastcall;
+
+// Parameters passed in registers:
+// First param in L
+// Second param in H
+```
+
+### 2. Inline Critical Functions
+
+```c
+inline void set_sprite_pos(char sprite, char x, char y)
+{
+    _8BP_locatesp_3(sprite, y, x);
+}
+```
+
+### 3. Use Assembly for Speed
+
+```c
+// Slow C loop
+for (i = 0; i < 100; i++) {
+    buffer[i] = 0;
+}
+
+// Fast assembly
+__asm
+    ld hl, #_buffer
+    ld de, #_buffer+1
+    ld bc, #99
+    ld (hl), #0
+    ldir
+__endasm;
+```
+
+## Next Steps
+
+1. **Optimize Code**: Profile and optimize critical sections
+2. **Add Features**: Enemies, collectibles, levels
+3. **Better Graphics**: Create more sprites
+4. **Add Music**: Integrate WYZ player
+5. **Test on Hardware**: Use M4 board or real CPC
+
+## Related
+
+- [8BP Game Example](/examples/8bp-game) - Full 8BP project
+- [ASM Project Example](/examples/asm-project) - Pure assembly
+- [Multi-File Projects](/recipes/multi-file-projects) - Organizing code

@@ -1,0 +1,476 @@
+---
+title: Graphics Conversion
+description: Convert PNG images to Amstrad CPC sprites (ASM) and loading screens (SCN)
+---
+
+## Overview
+
+DevCPC includes automatic conversion tools for graphics:
+- **Sprites**: PNG → ASM format for use in games
+- **Loading Screens**: PNG → SCN format for full-screen images
+
+Both use the CPC color palette and are automatically processed during `devcpc build`.
+
+## Sprite Conversion (PNG → ASM)
+
+### Configuration
+
+Add to your `devcpc.conf`:
+
+```bash
+# Sprite conversion settings
+SPRITES_PATH="assets/sprites"     # Where PNG files are located
+SPRITES_OUT_FILE="ASM/sprites.asm" # Output ASM file
+MODE=0                              # CPC mode (0, 1, or 2)
+SPRITES_TOLERANCE=8                 # RGB tolerance
+SPRITES_TRANSPARENT_INK=""          # Optional: INK for transparency
+```
+
+### CPC Modes
+
+| Mode | Colors | Pixels/byte | Bits/pixel | Resolution |
+|------|--------|-------------|------------|-----------|
+| **0** | 16 | 2 | 4 | 160x200 |
+| **1** | 4 | 4 | 2 | 320x200 |
+| **2** | 2 | 8 | 1 | 640x200 |
+
+### Directory Structure
+
+```
+my-game/
+├── assets/
+│   └── sprites/           # Your PNG files (recursive search)
+│       ├── player.png
+│       ├── enemies/
+│       │   ├── alien1.png
+│       │   └── alien2.png
+│       └── tiles/
+│           ├── wall.png
+│           └── floor.png
+│
+└── ASM/
+    └── sprites.asm       # Generated automatically
+```
+
+### Usage
+
+```bash
+# 1. Place PNG files in assets/sprites/
+# 2. Configure SPRITES_PATH in devcpc.conf
+# 3. Build project
+devcpc build
+```
+
+DevCPC automatically:
+- Searches recursively for PNG files
+- Converts to CPC palette
+- Generates ASM with sprite data
+- Includes palette information
+
+### Build Output
+
+```bash
+═══════════════════════════════════════
+  Convertir Sprites PNG a ASM
+═══════════════════════════════════════
+
+ℹ Ruta sprites:    assets/sprites
+ℹ Modo CPC:        0
+ℹ Archivo salida:  ASM/sprites.asm
+ℹ Tolerancia RGB:  8
+
+ℹ Ejecutando png2asm.py...
+
+OK: ASM/sprites.asm
+PNGs encontrados: 3  | Convertidos OK: 3  | Errores: 0
+
+Resumen:
+PNG           Label      Size(px)  Bytes/line  Colors  Fallback  Status
+player.png    player     16x16     2           4       no        OK
+enemy1.png    enemy1     16x16     2           3       no        OK
+tile1.png     tile1      8x8       1           2       no        OK
+
+✓ Sprites convertidos exitosamente
+```
+
+### Generated ASM Format
+
+```asm
+; MODE 0
+
+PLAYER
+;------ BEGIN IMAGE --------
+  db 2     ; width in bytes
+  db 16    ; height in pixels
+  db 0, 0
+  db 0, 0
+  db 85, 85
+  db 170, 170
+  ; ... more bytes
+;------ END IMAGE --------
+  ; Palette (PEN -> INK) detected in PNG
+  ; INK 0,0
+  ; INK 1,24
+  ; INK 2,6
+
+ENEMY1
+;------ BEGIN IMAGE --------
+  db 2
+  db 16
+  ; ... sprite data
+;------ END IMAGE --------
+  ; INK 0,0
+  ; INK 1,2
+```
+
+### Using Sprites in Code
+
+```asm
+; Include generated sprites
+include "sprites.asm"
+
+; Draw sprites with 8BP
+ld hl, PLAYER
+call |PSPRITE
+
+ld hl, ENEMY1
+call |PSPRITE
+```
+
+## CPC Color Palette
+
+The Amstrad CPC has 27 hardware colors (INK 0-26):
+
+```
+INK 0  = Black (0,0,0)
+INK 1  = Dark Blue (0,0,128)
+INK 2  = Blue (0,0,255)
+INK 3  = Dark Red (128,0,0)
+INK 4  = Dark Magenta (128,0,128)
+INK 5  = Magenta (128,0,255)
+INK 6  = Red (255,0,0)
+INK 7  = Pink (255,0,128)
+INK 8  = Light Pink (255,0,255)
+INK 9  = Dark Green (0,128,0)
+INK 10 = Dark Cyan (0,128,128)
+INK 11 = Cyan (0,128,255)
+INK 12 = Dark Yellow (128,128,0)
+INK 13 = Gray (128,128,128)
+INK 14 = Pastel Blue (128,128,255)
+INK 15 = Orange (255,128,0)
+INK 16 = Pastel Pink (255,128,128)
+INK 17 = Purple (255,128,255)
+INK 18 = Green (0,255,0)
+INK 19 = Sea Green (0,255,128)
+INK 20 = Light Cyan (0,255,255)
+INK 21 = Yellow-Green (128,255,0)
+INK 22 = Pastel Green (128,255,128)
+INK 23 = Pastel Cyan (128,255,255)
+INK 24 = Yellow (255,255,0)
+INK 25 = Pastel Yellow (255,255,128)
+INK 26 = White (255,255,255)
+```
+
+### Tolerance Settings
+
+Tolerance controls how closely PNG colors must match the CPC palette:
+
+```bash
+# Exact match only (strict)
+SPRITES_TOLERANCE=0
+
+# Recommended (allows small variations)
+SPRITES_TOLERANCE=8
+
+# Automatic (always finds closest color)
+SPRITES_TOLERANCE=-1
+```
+
+### Transparency
+
+Define an INK for transparent pixels (alpha=0):
+
+```bash
+# Transparent pixels become INK 0 (black)
+SPRITES_TRANSPARENT_INK=0
+
+# Transparent pixels become INK 16 (pastel pink)
+SPRITES_TRANSPARENT_INK=16
+```
+
+## Loading Screen Conversion (PNG → SCN)
+
+### Configuration
+
+Add to your `devcpc.conf`:
+
+```bash
+# Screen conversion settings
+LOADER_SCREEN="assets/screen"  # Where PNG screens are located
+MODE=0                          # CPC mode (0, 1, or 2)
+```
+
+### Screen Requirements
+
+PNG files must match the CPC mode resolution:
+
+| Mode | Resolution | Colors | Use Case |
+|------|------------|--------|----------|
+| 0 | 160×200 | 16 | Title screens, menus |
+| 1 | 320×200 | 4 | High-res graphics |
+| 2 | 640×200 | 2 | Text screens |
+
+### Directory Structure
+
+```
+my-game/
+├── assets/
+│   └── screen/            # Your PNG screens
+│       ├── title.png      # 160x200 (Mode 0)
+│       ├── loading.png
+│       └── credits.png
+│
+├── obj/                   # Generated by build
+│   ├── title.scn         # 16KB screen file
+│   ├── title.scn.info    # Palette info
+│   ├── loading.scn
+│   └── loading.scn.info
+│
+└── dist/
+    └── my-game.dsk       # SCN files included
+```
+
+### Usage
+
+```bash
+# 1. Create PNG screens (exact resolution required)
+# 2. Place in assets/screen/
+# 3. Configure LOADER_SCREEN in devcpc.conf
+# 4. Build
+devcpc build
+```
+
+### Build Output
+
+```bash
+═══════════════════════════════════════
+  Convertir Pantallas de Carga
+═══════════════════════════════════════
+
+ℹ Ruta:  assets/screen
+ℹ Modo:  0 (160x200, 16 colores)
+
+→ Convirtiendo title.png...
+✓ title.scn generado (16384 bytes)
+
+→ Convirtiendo loading.png...
+✓ loading.scn generado (16384 bytes)
+
+✓ 2 pantalla(s) convertida(s)
+
+→ Añadiendo pantallas al DSK...
+
+ℹ   title.scn
+ℹ   loading.scn
+✓ 2 pantalla(s) añadida(s) al DSK
+```
+
+### SCN Info Files
+
+Each screen generates a `.scn.info` file with palette data:
+
+```
+FILE: title.scn
+WIDTH: 160
+HEIGHT: 200
+MODE: 0
+PALETTE COLORS: 8
+
+FW              HW              RGB
+0               0x14    (0, 0, 0)
+24              0x0A    (255, 255, 0)
+6               0x04    (255, 0, 0)
+
+; ASM HW palette
+db 0x14, 0x0A, 0x04
+
+' BASIC palette
+INK 0,0: INK 1,24: INK 2,6
+
+// C palette
+hwpal = { 0x14, 0x0A, 0x04 }
+```
+
+### Using Screens from BASIC
+
+```basic
+10 REM Load title screen
+20 MODE 0
+30 LOAD"TITLE.SCN",&C000
+40 REM Set palette (from .info file)
+50 INK 0,0: INK 1,24: INK 2,6
+60 PAUSE 200
+```
+
+### Using Screens from ASM
+
+```asm
+; Load screen to video memory
+ld hl, title_scn
+ld de, &C000
+ld bc, 16384
+ldir
+
+; Set hardware palette
+ld bc, &7F00
+ld a, 0
+out (c), a
+ld bc, &7F01
+ld a, &14    ; INK 0 = Black
+out (c), a
+; ... more INKs
+
+title_scn:
+incbin "title.scn"
+```
+
+## PNG Requirements
+
+### Sprite PNGs
+
+**Width constraints:**
+- Mode 0: Multiple of 2 pixels (2, 4, 6, 8, 10, 12, 14, 16...)
+- Mode 1: Multiple of 4 pixels (4, 8, 12, 16, 20...)
+- Mode 2: Multiple of 8 pixels (8, 16, 24, 32...)
+
+**Height:** Any value (no constraint)
+
+**Colors:**
+- Mode 0: Maximum 16 colors
+- Mode 1: Maximum 4 colors
+- Mode 2: Maximum 2 colors
+
+### Screen PNGs
+
+**Resolution (exact):**
+- Mode 0: 160×200 pixels
+- Mode 1: 320×200 pixels
+- Mode 2: 640×200 pixels
+
+**Colors:** Same as sprite limits
+
+**File size:** All generate 16KB SCN files
+
+## Complete Example
+
+### Project Configuration
+
+```bash
+# devcpc.conf
+PROJECT_NAME="space-game"
+BUILD_LEVEL=0
+
+# Graphics conversion
+SPRITES_PATH="assets/sprites"
+SPRITES_OUT_FILE="ASM/sprites.asm"
+LOADER_SCREEN="assets/screen"
+MODE=0
+SPRITES_TOLERANCE=8
+```
+
+### Create Graphics
+
+```bash
+# Create directories
+mkdir -p assets/sprites
+mkdir -p assets/screen
+
+# Add your PNG files
+# sprites: 16x16, 16 colors max
+# screens: 160x200, 16 colors max
+```
+
+### Build and Test
+
+```bash
+# Build everything
+devcpc build
+
+# Files generated:
+# - ASM/sprites.asm (sprite data)
+# - obj/title.scn (screen file)
+# - obj/title.scn.info (palette)
+# - dist/space-game.dsk (all included)
+
+# Test in emulator
+devcpc run
+```
+
+### BASIC Loader Example
+
+```basic
+10 MODE 0
+20 REM Load title screen
+30 LOAD"TITLE.SCN",&C000
+40 INK 0,0: INK 1,24: INK 2,6
+50 PAUSE 200
+60 REM Load 8BP with sprites
+70 MEMORY 23599
+80 LOAD"8BP0.BIN"
+90 CALL &6B78
+```
+
+## Troubleshooting
+
+### Common Errors
+
+**"Pillow no instalado"**
+```bash
+pip3 install Pillow
+```
+
+**"ancho no divisible"**
+- Mode 0: Width must be even (2, 4, 6...)
+- Mode 1: Width must be ×4 (4, 8, 12...)
+- Mode 2: Width must be ×8 (8, 16, 24...)
+
+**"usa X INKs pero MODE permite Y"**
+- Reduce colors in your PNG
+- Use a mode with more colors
+- Mode 0 = 16, Mode 1 = 4, Mode 2 = 2
+
+**"Color no coincide con paleta CPC"**
+- Increase tolerance: `SPRITES_TOLERANCE=16`
+- Use automatic: `SPRITES_TOLERANCE=-1`
+- Adjust PNG colors to CPC palette
+
+**"Resolución incorrecta"**
+- Mode 0: Must be exactly 160×200
+- Mode 1: Must be exactly 320×200
+- Mode 2: Must be exactly 640×200
+
+### Best Practices
+
+1. **Use CPC colors** - Design with the 27-color palette
+2. **Test tolerance** - Start with 8, adjust if needed
+3. **Organize sprites** - Use subdirectories for categories
+4. **Check .info files** - Verify palettes before coding
+5. **Validate early** - Run `devcpc build` frequently
+
+## Sprites vs Screens Comparison
+
+| Feature | Sprites (ASM) | Screens (SCN) |
+|---------|---------------|---------------|
+| **Format** | ASM source code | Binary data |
+| **Size** | Variable | 16KB (fixed) |
+| **Usage** | Game graphics | Full screens |
+| **Load address** | Any | 0xC000 only |
+| **Included in** | Compiled binary | DSK as file |
+| **PNG size** | Any width (aligned) | Exact resolution |
+| **Output** | One ASM file | Multiple SCN files |
+
+## See Also
+
+- [Creating Projects](/guides/creating-projects) - Set up asset directories
+- [Compiling Code](/guides/compiling-code) - Build process details
+- [Disk Images](/guides/disk-images) - How files are added to DSK

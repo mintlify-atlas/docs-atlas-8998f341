@@ -1,0 +1,344 @@
+---
+title: "SDCC Compiler"
+description: "Small Device C Compiler for Amstrad CPC"
+icon: "c"
+---
+
+## Overview
+
+SDCC (Small Device C Compiler) is an open-source C compiler that targets 8-bit microcontrollers and processors, including the Z80 CPU used in the Amstrad CPC. DevCPC integrates SDCC for compiling C code.
+
+<Note>
+SDCC is an **optional** dependency. Only install it if you plan to write C code for your CPC projects.
+</Note>
+
+## Installation
+
+<Tabs>
+  <Tab title="macOS">
+    Install via Homebrew:
+
+    ```bash
+    brew install sdcc
+    ```
+
+    Verify installation:
+    ```bash
+    sdcc --version
+    ```
+  </Tab>
+
+  <Tab title="Linux">
+    Install via package manager:
+
+    <CodeGroup>
+    ```bash Ubuntu/Debian
+    sudo apt-get update
+    sudo apt-get install sdcc
+    ```
+
+    ```bash Fedora
+    sudo dnf install sdcc
+    ```
+
+    ```bash Arch
+    sudo pacman -S sdcc
+    ```
+    </CodeGroup>
+
+    Verify installation:
+    ```bash
+    sdcc --version
+    ```
+  </Tab>
+
+  <Tab title="Windows">
+    Download from the official website:
+
+    1. Visit [SDCC Downloads](http://sdcc.sourceforge.net/)
+    2. Download Windows installer
+    3. Run installer and follow prompts
+    4. Add SDCC to PATH
+
+    Verify in Git Bash or WSL:
+    ```bash
+    sdcc --version
+    ```
+  </Tab>
+</Tabs>
+
+## Usage in DevCPC
+
+Configure C compilation in `devcpc.conf`:
+
+```bash devcpc.conf
+# Enable C compilation
+C_PATH="C"
+C_SOURCE="main.c"
+C_CODE_LOC=20000
+```
+
+Build your project:
+
+```bash
+devcpc build
+```
+
+DevCPC will:
+1. Compile C code with SDCC targeting Z80
+2. Generate Intel HEX file (.ihx)
+3. Convert to binary with hex2bin
+4. Add to DSK with correct load address
+
+## C Code Structure
+
+### Basic Program
+
+```c C/main.c
+#include "8BP_wrapper/8BP.h"
+
+void main(void) {
+    // Clear screen
+    _CLS();
+    
+    // Set colors
+    _INK(0, 0);   // Black background
+    _INK(1, 24);  // Yellow text
+    
+    // Position cursor and print
+    _LOCATE(10, 10);
+    _PRINT("Hello from C!");
+    
+    // Wait for keypress
+    while(!_INKEY()) {
+        // Game loop
+    }
+}
+```
+
+### Using 8BP Functions
+
+The 8BP wrapper provides BASIC-like commands:
+
+```c
+#include "8BP_wrapper/8BP.h"
+
+void game_loop(void) {
+    int x = 100, y = 100;
+    
+    while(1) {
+        // Clear screen
+        _CLS();
+        
+        // Read joystick
+        int joy = _JOY(0);
+        
+        // Move player
+        if (joy & UP)    y -= 2;
+        if (joy & DOWN)  y += 2;
+        if (joy & LEFT)  x -= 2;
+        if (joy & RIGHT) x += 2;
+        
+        // Draw sprite
+        _LOCATE(x, y);
+        _PSPRITE(sprite_address);
+        
+        // Check fire button
+        if (joy & FIRE) {
+            shoot();
+        }
+        
+        // Frame sync
+        _WAITVBL();
+    }
+}
+```
+
+## Memory Constraints
+
+<Warning>
+C code must load below address **23999** to avoid overwriting the 8BP library.
+</Warning>
+
+```bash
+# Safe configuration
+C_CODE_LOC=20000  # Start at 20000
+MEMORY 23599      # In BASIC
+
+# For larger C programs
+C_CODE_LOC=19000  # Start lower
+MEMORY 18999      # Adjust BASIC MEMORY
+```
+
+## Compilation Flags
+
+DevCPC uses these SDCC flags:
+
+```bash
+sdcc -mz80 \
+     --code-loc 20000 \
+     --data-loc 0 \
+     --no-std-crt0 \
+     -o main.ihx \
+     main.c
+```
+
+- `-mz80` - Target Z80 processor
+- `--code-loc` - Where to load code (from C_CODE_LOC)
+- `--data-loc` - Where to place data
+- `--no-std-crt0` - Don't include standard startup code
+
+## Linking with ASM
+
+Mix C and assembly code:
+
+```c main.c
+// Declare external ASM function
+extern void draw_fast_sprite(int x, int y);
+
+void main(void) {
+    // Call ASM routine from C
+    draw_fast_sprite(100, 50);
+}
+```
+
+```asm fast_sprite.asm
+; Fast sprite routine in ASM
+_draw_fast_sprite:
+    ; HL = x, DE = y (SDCC calling convention)
+    ; Your optimized sprite code here
+    ret
+```
+
+## Available Headers
+
+### 8BP Wrapper
+
+```c
+#include "8BP_wrapper/8BP.h"
+
+// Functions available:
+_CLS()              // Clear screen
+_INK(pen, color)   // Set color
+_LOCATE(x, y)      // Position cursor
+_PRINT(text)       // Print text
+_PSPRITE(addr)     // Print sprite
+_JOY(port)         // Read joystick
+_INKEY()           // Check keyboard
+_WAITVBL()         // Wait for vertical blank
+```
+
+### Mini BASIC
+
+```c
+#include "mini_BASIC/minibasic.h"
+
+// BASIC-like functions for C:
+CLS();
+LOCATE(x, y);
+PRINT("text");
+PLOT(x, y, color);
+```
+
+## Optimization
+
+### Compiler Options
+
+Optimize C code:
+
+```bash
+# In DevCPC build process (automatic):
+sdcc -mz80 --opt-code-speed  # Optimize for speed
+sdcc -mz80 --opt-code-size   # Optimize for size
+```
+
+### Tips
+
+- Use `unsigned char` instead of `int` where possible
+- Avoid floating-point math (very slow on Z80)
+- Use inline assembly for critical sections
+- Keep functions small and simple
+- Use lookup tables instead of calculations
+
+## Debugging
+
+### Symbol Files
+
+SDCC generates `.map` files with symbols:
+
+```
+_main           0x4E20
+_game_loop      0x4E50
+_player_x       0x5000
+```
+
+Use these addresses in BASIC:
+
+```basic
+10 LOAD"main.BIN",20000
+20 CALL &4E20  ' Call main()
+```
+
+### Print Debugging
+
+```c
+void debug_value(int val) {
+    char buffer[16];
+    sprintf(buffer, "Val=%d", val);
+    _LOCATE(0, 0);
+    _PRINT(buffer);
+}
+```
+
+## Limitations
+
+<Warning>
+SDCC for Z80 has limitations:
+</Warning>
+
+- **No floating point** - Use fixed-point math
+- **Limited stack** - Keep recursion shallow
+- **No standard library** - Minimal C library available
+- **No dynamic memory** - No malloc/free
+- **Small code size** - Z80 is 8-bit with limited addressing
+
+## Example Projects
+
+See complete C examples:
+
+<CardGroup cols={2}>
+  <Card title="C Project Example" icon="flask" href="/examples/c-project">
+    Full C project with SDCC and 8BP
+  </Card>
+  <Card title="C Compilation Guide" icon="code" href="/advanced/c-compilation">
+    Detailed C compilation reference
+  </Card>
+</CardGroup>
+
+## Resources
+
+- [SDCC Official Site](http://sdcc.sourceforge.net/)
+- [SDCC Manual](http://sdcc.sourceforge.net/doc/sdccman.pdf)
+- [Z80 Programming Guide](http://www.z80.info/)
+- [CPC Firmware Guide](http://www.cpcwiki.eu/index.php/Firmware_Guide)
+
+## Alternatives
+
+### Z88DK
+
+Another C compiler for Z80:
+
+```bash
+# Install Z88DK
+brew install z88dk  # macOS
+
+# Compile for CPC
+zcc +cpc -create-app main.c
+```
+
+### Pure Assembly
+
+For maximum performance and control, write pure Z80 assembly:
+
+- [ASM Project Example](/examples/asm-project)
+- [ABASM Assembler](/tools/abasm)

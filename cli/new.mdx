@@ -1,0 +1,211 @@
+---
+title: 'devcpc new'
+description: 'Create a new DevCPC project with complete structure'
+icon: 'folder-plus'
+---
+
+## Overview
+
+The `devcpc new` command creates a new DevCPC project with all necessary directories, configuration files, and initial structure. It provides an interactive template selection to choose between 8BP, BASIC, or ASM project types.
+
+## Syntax
+
+```bash
+devcpc new <project-name>
+```
+
+## Arguments
+
+<ParamField path="project-name" type="string" required>
+  Name of the project to create. Must contain only letters, numbers, hyphens, and underscores.
+</ParamField>
+
+## Template Selection
+
+When you run `devcpc new`, you'll be prompted to select a project type:
+
+```
+¿Qué tipo de proyecto deseas crear?
+
+  1) 8BP       - Proyecto con librería 8BP (ASM + BASIC + sprites + música)
+  2) BASIC     - Proyecto BASIC puro (solo BASIC + recursos)
+  3) ASM       - Proyecto ASM sin 8bp (solo ensamblador + recursos)
+
+Selecciona una opción [1-3]:
+```
+
+### Template Types
+
+| Template | Description | Includes |
+|----------|-------------|----------|
+| **8BP** | Full game development with 8BP library | ASM, BASIC, sprites, music, C support |
+| **BASIC** | Pure BASIC development | BASIC files, resources, screen loading |
+| **ASM** | Pure assembler without 8BP | Z80 assembler, minimal configuration |
+
+## Created Structure
+
+The command creates the following structure:
+
+```
+project-name/
+├── devcpc.conf          # Project configuration
+├── README.md            # Documentation
+├── .gitignore          # Git ignore rules
+│
+├── ASM/                # Assembler code (8BP projects)
+├── bas/                # BASIC files (8BP/BASIC projects)
+├── src/                # Source code (ASM/BASIC projects)
+├── assets/             # Resources
+│   ├── sprites/        # Sprite PNG files
+│   └── screen/         # Loading screen PNG files
+├── raw/                # Raw binary files
+├── c/                  # C code (8BP projects)
+│
+├── obj/                # Generated intermediate files
+└── dist/               # Generated DSK/CDT files
+```
+
+## Examples
+
+### Create an 8BP Project
+
+```bash
+devcpc new mi-super-juego
+```
+
+**Output:**
+```
+═══════════════════════════════════════
+  Crear Nuevo Proyecto
+═══════════════════════════════════════
+
+ℹ Nombre del proyecto: mi-super-juego
+
+¿Qué tipo de proyecto deseas crear?
+
+  1) 8BP       - Proyecto con librería 8BP (ASM + BASIC + sprites + música)
+  2) BASIC     - Proyecto BASIC puro (solo BASIC + recursos)
+  3) ASM       - Proyecto ASM sin 8bp (solo ensamblador + recursos)
+
+Selecciona una opción [1-3]: 1
+
+ℹ Tipo seleccionado: 8BP
+
+→ Copiando estructura de plantilla '8bp'...
+✓ Estructura copiada
+→ Configurando proyecto...
+✓ Configuración ajustada
+→ Creando README...
+✓ README.md creado
+→ Creando .gitignore...
+✓ .gitignore creado
+
+✓ Proyecto 'mi-super-juego' (8bp) creado exitosamente!
+
+ℹ Próximos pasos:
+
+  1. cd mi-super-juego
+  2. Edita devcpc.conf según tus necesidades
+  3. Añade tu código en asm/, bas/, assets/, etc.
+  4. Configura BUILD_LEVEL en devcpc.conf (0-4)
+  5. devcpc build
+
+ℹ Para más ayuda: devcpc help
+```
+
+### Create a BASIC Project
+
+```bash
+devcpc new basic-game
+```
+
+Select option `2` when prompted.
+
+### Create an ASM Project
+
+```bash
+devcpc new asm-demo
+```
+
+Select option `3` when prompted.
+
+## Generated Files
+
+### devcpc.conf
+
+Project configuration file with all variables needed for compilation. Pre-configured based on the selected template.
+
+### README.md
+
+Custom README with:
+- Project type description
+- Active configuration variables
+- Quick usage guide
+- Template-specific instructions
+
+### .gitignore
+
+Pre-configured to ignore:
+- Generated files (`obj/`, `dist/`)
+- Binary files (`.bin`, `.lst`, `.map`)
+- Auto-generated sprites (`sprites.asm`)
+- Backup files (`.backup`, `.bak`)
+
+## Next Steps
+
+After creating a project:
+
+1. **Navigate to the project**
+   ```bash
+   cd project-name
+   ```
+
+2. **Review configuration**
+   ```bash
+   cat devcpc.conf
+   devcpc info
+   ```
+
+3. **Add your code**
+   - 8BP: Edit `asm/make_all_mygame.asm`
+   - BASIC: Add `.bas` files to `src/` or `bas/`
+   - ASM: Edit `src/main.asm`
+
+4. **Validate project**
+   ```bash
+   devcpc validate
+   ```
+
+5. **Build**
+   ```bash
+   devcpc build
+   ```
+
+## Validation
+
+The command validates:
+- Project name contains only allowed characters
+- Directory doesn't already exist
+- Template exists and is valid
+
+## Error Handling
+
+```bash
+# Invalid name
+devcpc new "my project"
+# Error: El nombre del proyecto solo puede contener letras, números, guiones y guiones bajos
+
+# Existing directory
+devcpc new existing-project
+# Error: El directorio 'existing-project' ya existe
+
+# No name provided
+devcpc new
+# Error: Debes especificar un nombre para el proyecto
+```
+
+## Related Commands
+
+- [`devcpc build`](/cli/build) - Compile the project
+- [`devcpc info`](/cli/info) - Show project configuration
+- [`devcpc validate`](/cli/validate) - Validate project setup

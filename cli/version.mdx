@@ -1,0 +1,271 @@
+---
+title: 'devcpc version'
+description: 'Display version information and check for updates'
+icon: 'tag'
+---
+
+## Overview
+
+The `devcpc version` command displays the currently installed version of DevCPC and automatically checks if a newer version is available on GitHub.
+
+## Syntax
+
+```bash
+devcpc version
+```
+
+## Output Example (Current Version)
+
+```
+DevCPC CLI v1.0.2
+
+✓ Estás usando la última versión
+```
+
+## Output Example (Update Available)
+
+```
+DevCPC CLI v1.0.1
+
+⚠ Nueva versión disponible: v1.0.2 (actual: v1.0.1)
+Actualizar: devcpc update
+```
+
+Or alternatively:
+
+```
+DevCPC CLI v1.0.1
+
+⚠ Nueva versión disponible: v1.0.2 (actual: v1.0.1)
+Actualizar: curl -fsSL https://destroyer.me/devcpc | bash
+```
+
+## Version Information
+
+The command displays:
+
+- **Current version** - Installed version number
+- **Update status** - Whether an update is available
+- **Latest version** - Newest version on GitHub (if different)
+- **Update command** - How to update
+
+## Version Format
+
+DevCPC uses semantic versioning:
+
+```
+v1.0.2
+│ │ │
+│ │ └─ Patch number (bug fixes)
+│ └─── Minor version (new features)
+└───── Major version (breaking changes)
+```
+
+### Version Components
+
+<ParamField path="Major" type="integer">
+  Incremented for breaking changes or major rewrites. Example: v1.x.x → v2.x.x
+</ParamField>
+
+<ParamField path="Minor" type="integer">
+  Incremented for new features (backward compatible). Example: v1.0.x → v1.1.x
+</ParamField>
+
+<ParamField path="Patch" type="integer">
+  Incremented for bug fixes and minor improvements. Example: v1.0.1 → v1.0.2
+</ParamField>
+
+## Update Checking
+
+The command automatically:
+
+1. Reads current version from `~/.DevCPC/VERSION`
+2. Queries GitHub API for latest release
+3. Compares versions
+4. Displays update notification if available
+
+### GitHub API Query
+
+```bash
+curl -fsSL https://api.github.com/repos/destroyer-dcf/DevCPC/releases/latest
+```
+
+The API returns JSON with release information:
+
+```json
+{
+  "tag_name": "v1.0.2",
+  "name": "Release 1.0.2",
+  "published_at": "2026-03-01T12:00:00Z",
+  ...
+}
+```
+
+## Version Storage
+
+Version information is stored in:
+
+```
+~/.DevCPC/VERSION
+```
+
+Content:
+```
+1.0.2
+```
+
+## Use Cases
+
+### Check Version Before Update
+
+```bash
+devcpc version
+devcpc update
+devcpc version
+```
+
+### Verify Installation
+
+After installing DevCPC:
+
+```bash
+devcpc version
+```
+
+### Troubleshooting
+
+When reporting issues:
+
+```bash
+devcpc version > version.txt
+# Attach version.txt to issue report
+```
+
+### CI/CD Version Checks
+
+```yaml
+# .github/workflows/build.yml
+steps:
+  - name: Check DevCPC Version
+    run: devcpc version
+```
+
+### Script Integration
+
+Extract version in scripts:
+
+```bash
+#!/bin/bash
+VERSION=$(devcpc version | grep -oP 'v\K[0-9.]+')
+echo "Using DevCPC $VERSION"
+```
+
+## Version Comparison
+
+The command compares versions numerically:
+
+```
+v1.0.1 < v1.0.2  ✓ Update available
+v1.0.2 = v1.0.2  ✓ Current
+v1.1.0 > v1.0.2  ✗ Shouldn't happen
+```
+
+## Update Recommendation
+
+When an update is available:
+
+```
+⚠ Nueva versión disponible: v1.0.2 (actual: v1.0.1)
+Actualizar: devcpc update
+```
+
+You can:
+
+1. **Update now:**
+   ```bash
+   devcpc update
+   ```
+
+2. **Reinstall:**
+   ```bash
+   curl -fsSL https://destroyer.me/devcpc | bash
+   ```
+
+3. **Manual update:**
+   ```bash
+   rm -rf ~/.DevCPC
+   curl -fsSL https://destroyer.me/devcpc | bash
+   ```
+
+## Version History
+
+To view version history:
+
+```bash
+# View GitHub releases
+open https://github.com/destroyer-dcf/DevCPC/releases
+
+# Or with curl
+curl -fsSL https://api.github.com/repos/destroyer-dcf/DevCPC/releases
+```
+
+## Offline Behavior
+
+If internet is unavailable:
+
+```
+DevCPC CLI v1.0.1
+
+⚠ No se pudo verificar actualizaciones (sin conexión)
+```
+
+The command still displays current version but can't check for updates.
+
+## Version in Help
+
+The version is also shown in help:
+
+```bash
+devcpc help
+```
+
+**Output:**
+```
+═════════════════════════════════════════════════
+CLI v1.0.2
+By Destroyer 2026
+═════════════════════════════════════════════════
+```
+
+## Exit Codes
+
+| Exit Code | Meaning |
+|-----------|----------|
+| **0** | Success (always) |
+
+The command always succeeds, even if it can't check for updates.
+
+## Version-Specific Features
+
+Some features may require minimum versions:
+
+| Feature | Minimum Version |
+|---------|----------------|
+| CDT tape support | v1.0.0+ |
+| CPR cartridge support | v1.0.0+ |
+| PNG sprite conversion | v1.0.0+ |
+| PNG screen conversion | v1.0.0+ |
+| Auto-update | v1.0.0+ |
+
+## Release Channels
+
+Currently DevCPC uses:
+- **Stable** - Production releases (v1.x.x)
+- **Beta** - Pre-release versions (v1.x.x-beta.x)
+
+The `version` command only checks stable releases.
+
+## Related Commands
+
+- [`devcpc update`](/cli/update) - Update to latest version
+- [`devcpc help`](/cli/help) - View help with version info

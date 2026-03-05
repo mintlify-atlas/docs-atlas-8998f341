@@ -1,0 +1,292 @@
+---
+title: 'devcpc update'
+description: 'Update DevCPC to the latest version'
+icon: 'cloud-arrow-down'
+---
+
+## Overview
+
+The `devcpc update` command updates your DevCPC installation to the latest version from GitHub Releases, preserving your configuration and projects.
+
+## Syntax
+
+```bash
+devcpc update
+```
+
+## Update Process
+
+The command follows these steps:
+
+1. **Check current version** - Displays installed version
+2. **Query GitHub API** - Fetches latest release information
+3. **Compare versions** - Determines if update is available
+4. **Confirm update** - Asks for user confirmation
+5. **Download release** - Downloads latest tar.gz from GitHub
+6. **Extract files** - Unpacks the archive
+7. **Update installation** - Replaces files in `~/.DevCPC`
+8. **Set permissions** - Ensures executable permissions
+9. **Verify update** - Confirms new version installed
+
+## Output Example (Update Available)
+
+```
+ℹ DevCPC CLI v1.0.1
+
+ℹ Verificando actualizaciones...
+✓ Última versión disponible: v1.0.2
+
+⚠ Nueva versión disponible: v1.0.2
+
+¿Deseas actualizar a v1.0.2? [S/n]: s
+
+ℹ Iniciando actualización...
+ℹ Descargando DevCPC v1.0.2...
+✓ Descarga completada
+ℹ Extrayendo archivos...
+ℹ Actualizando archivos en ~/.DevCPC...
+
+✓ DevCPC actualizado exitosamente a v1.0.2
+
+ℹ Verifica la instalación con: devcpc version
+```
+
+## Output Example (Already Updated)
+
+```
+ℹ DevCPC CLI v1.0.2
+
+ℹ Verificando actualizaciones...
+✓ Última versión disponible: v1.0.2
+
+✓ Ya tienes la última versión instalada
+```
+
+## What Gets Updated
+
+The update replaces:
+
+- `bin/` - DevCPC executable
+- `lib/` - Shell libraries
+- `tools/` - Python tools (ABASM, dsk.py, cdt.py, etc.)
+- `templates/` - Project templates
+
+## What Gets Preserved
+
+The update preserves:
+
+- Your projects (outside `~/.DevCPC`)
+- Shell configuration (`~/.bashrc`, `~/.zshrc`)
+- PATH configuration
+
+## Version Checking
+
+The command queries GitHub API:
+
+```bash
+https://api.github.com/repos/destroyer-dcf/DevCPC/releases/latest
+```
+
+It extracts the `tag_name` field to determine the latest version.
+
+## Manual Update
+
+If automatic update fails, you can update manually:
+
+```bash
+# Remove old installation
+rm -rf ~/.DevCPC
+
+# Reinstall
+curl -fsSL https://destroyer.me/devcpc | bash
+```
+
+Or download from GitHub:
+
+```bash
+# Download release
+wget https://github.com/destroyer-dcf/DevCPC/releases/download/v1.0.2/DevCPC-1.0.2.tar.gz
+
+# Extract
+tar -xzf DevCPC-1.0.2.tar.gz
+
+# Install
+cd DevCPC
+./setup.sh
+```
+
+## Verification
+
+After updating, verify the new version:
+
+```bash
+devcpc version
+```
+
+**Output:**
+```
+DevCPC CLI v1.0.2
+✓ Estás usando la última versión
+```
+
+## Automated Updates
+
+You can automate update checks in your workflow:
+
+```bash
+#!/bin/bash
+# check-updates.sh
+
+devcpc version | grep -q "Nueva versión disponible"
+if [ $? -eq 0 ]; then
+    echo "Update available"
+    devcpc update
+fi
+```
+
+## Update Frequency
+
+Check for updates:
+- Before starting new projects
+- After seeing release announcements
+- Periodically (weekly/monthly)
+
+```bash
+# Weekly update check
+devcpc update
+```
+
+## Release Notes
+
+After updating, check release notes:
+
+```bash
+# Visit GitHub releases
+open https://github.com/destroyer-dcf/DevCPC/releases
+```
+
+Or view changelog:
+
+```bash
+cat ~/.DevCPC/CHANGELOG.md
+```
+
+## Rollback
+
+If you need to rollback to a previous version:
+
+```bash
+# Remove current installation
+rm -rf ~/.DevCPC
+
+# Download specific version
+wget https://github.com/destroyer-dcf/DevCPC/releases/download/v1.0.1/DevCPC-1.0.1.tar.gz
+
+# Extract and install
+tar -xzf DevCPC-1.0.1.tar.gz
+cd DevCPC
+./setup.sh
+```
+
+## Error Handling
+
+### No Internet Connection
+
+```
+ℹ Verificando actualizaciones...
+✗ No se pudo conectar con GitHub para verificar actualizaciones
+```
+
+**Fix:** Check your internet connection and try again.
+
+### Download Failed
+
+```
+ℹ Descargando DevCPC v1.0.2...
+✗ No se pudo descargar la actualización
+```
+
+**Fix:** 
+- Check internet connection
+- Verify GitHub is accessible
+- Try manual update
+
+### Extraction Failed
+
+```
+ℹ Extrayendo archivos...
+✗ No se pudo extraer el archivo
+```
+
+**Fix:**
+- Check disk space
+- Verify tar.gz is not corrupted
+- Try manual update
+
+### Permission Denied
+
+```
+ℹ Actualizando archivos en ~/.DevCPC...
+✗ Permission denied
+```
+
+**Fix:**
+```bash
+# Fix permissions
+chmod -R u+w ~/.DevCPC
+
+# Try again
+devcpc update
+```
+
+## Network Requirements
+
+The update requires:
+- Internet connection
+- Access to `github.com`
+- Access to `api.github.com`
+- Ability to download ~2-5 MB
+
+## Update Size
+
+Typical update downloads:
+- **Small update:** 1-2 MB (bug fixes)
+- **Medium update:** 2-4 MB (new features)
+- **Large update:** 4-8 MB (major version)
+
+## Version Numbering
+
+DevCPC uses semantic versioning:
+
+```
+v1.0.2
+│ │ │
+│ │ └─ Patch (bug fixes)
+│ └─── Minor (new features)
+└───── Major (breaking changes)
+```
+
+- **Major:** Breaking changes, major new features
+- **Minor:** New features, backward compatible
+- **Patch:** Bug fixes, minor improvements
+
+## Update Notifications
+
+DevCPC automatically checks for updates when running:
+
+```bash
+devcpc version
+```
+
+If an update is available:
+```
+DevCPC CLI v1.0.1
+
+⚠ Nueva versión disponible: v1.0.2 (actual: v1.0.1)
+Actualizar: devcpc update
+```
+
+## Related Commands
+
+- [`devcpc version`](/cli/version) - Check current version
+- [`devcpc help`](/cli/help) - View help after update

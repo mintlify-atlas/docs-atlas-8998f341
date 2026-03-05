@@ -1,0 +1,271 @@
+---
+title: "ABASM Assembler"
+description: "Z80 assembler built into DevCPC"
+icon: "microchip"
+---
+
+## Overview
+
+ABASM is a modern Z80 assembler created by [fragarco](https://github.com/fragarco) and integrated into DevCPC. It provides cross-platform Z80 assembly compilation with support for macros, includes, and various output formats.
+
+## Key Features
+
+- ✅ **Z80 instruction set** - Full Zilog Z80 support
+- ✅ **Macros** - Reusable code blocks
+- ✅ **Include files** - Modular code organization
+- ✅ **Multiple outputs** - Binary, symbols, listings
+- ✅ **Python-based** - Cross-platform compatibility
+- ✅ **Built-in** - No separate installation needed
+
+<Note>
+ABASM is included with DevCPC and automatically used when you run `devcpc build`.
+</Note>
+
+## Usage in DevCPC
+
+ABASM is automatically invoked during the build process:
+
+```bash
+devcpc build
+```
+
+DevCPC runs ABASM with appropriate flags for:
+- ASM compilation (8BP and pure ASM projects)
+- Load address configuration
+- Symbol generation
+- Listing file creation
+
+## Assembly Syntax
+
+### Basic Structure
+
+```asm main.asm
+; Simple Z80 program
+org &4000              ; Origin address
+
+start:
+    ld hl, message     ; Load address
+    call print         ; Call subroutine
+    ret
+
+print:
+    ld a, (hl)        ; Load character
+    or a              ; Check if zero
+    ret z             ; Return if end
+    call &BB5A        ; Firmware TXT OUTPUT
+    inc hl            ; Next character
+    jr print          ; Loop
+
+message:
+    db "Hello, CPC!", 0
+```
+
+### Macros
+
+```asm
+; Define macro
+macro PRINT_CHAR char
+    ld a, char
+    call &BB5A         ; TXT OUTPUT
+endm
+
+; Use macro
+PRINT_CHAR 'A'
+PRINT_CHAR 'B'
+PRINT_CHAR 'C'
+```
+
+### Include Files
+
+```asm main.asm
+include "firmware.asm"
+include "sprites.asm"
+
+org &4000
+    call fw_clear_screen
+    call draw_sprite
+    ret
+```
+
+```asm firmware.asm
+; Firmware routines
+fw_clear_screen:
+    call &BC14         ; GRA CLEAR WINDOW
+    ret
+
+fw_set_ink:
+    call &BC38         ; GRA SET PEN
+    ret
+```
+
+## Command Line (Manual)
+
+While DevCPC handles ABASM automatically, you can run it manually:
+
+```bash
+# Compile assembly file
+python3 ~/.DevCPC/tools/abasm/src/abasm.py -i main.asm -o main.bin
+
+# Generate listing
+python3 ~/.DevCPC/tools/abasm/src/abasm.py -i main.asm -o main.bin -l main.lst
+
+# Set load address
+python3 ~/.DevCPC/tools/abasm/src/abasm.py -i main.asm -o main.bin -a 0x4000
+```
+
+## Output Files
+
+ABASM generates:
+
+### Binary (.bin)
+Compiled machine code:
+```
+8BP0.bin    # 8BP level 0
+8BP1.bin    # 8BP level 1
+program.bin # Pure ASM output
+```
+
+### Listing (.lst)
+Detailed compilation output:
+```
+0000                         org &4000
+4000 21 10 40                ld hl, message
+4003 CD 20 40                call print
+4006 C9                      ret
+```
+
+### Map (.map)
+Symbol table:
+```
+start    = &4000
+print    = &4020
+message  = &4010
+```
+
+## Integration with 8BP
+
+For 8BP projects, ABASM compiles:
+
+```asm make_all_mygame.asm
+; BUILD_LEVEL set by DevCPC
+ASSEMBLING_OPTION = 0
+
+; Include 8BP library
+include "8bitsDePoder_v043_001.asm"
+
+; Your game code
+include "make_graficos_mygame.asm"
+include "make_codigo_mygame.asm"
+include "sprites.asm"
+```
+
+DevCPC automatically:
+1. Sets `ASSEMBLING_OPTION` based on `BUILD_LEVEL`
+2. Compiles with appropriate load address
+3. Generates output binaries (8BP0.bin, 8BP1.bin, etc.)
+4. Creates symbol files for debugging
+
+## Libraries
+
+ABASM includes libraries:
+
+### cpcrslib
+```asm
+; Include cpcrslib sprite functions
+include "lib/cpcrslib/sprite/putsp.asm"
+
+; Use library function
+ld hl, sprite_data
+ld de, &C000
+call cpc_PutSp
+```
+
+### cpctelera
+```asm
+; Include CPCtelera functions
+include "lib/cpctelera/sprites/cpct_drawSprite.asm"
+
+; Use CPCtelera
+ld hl, sprite
+ld de, &C050
+call cpct_drawSprite
+```
+
+## Directives
+
+Supported assembly directives:
+
+```asm
+org &4000              ; Set origin address
+db "text", 0          ; Define bytes
+dw &1234, &5678       ; Define words
+ds 100                ; Define space (reserve bytes)
+equ value = 42        ; Define constant
+if DEBUG              ; Conditional assembly
+    ; debug code
+endif
+```
+
+## Error Messages
+
+Common ABASM errors:
+
+<AccordionGroup>
+  <Accordion title="Undefined symbol">
+    ```
+    Error: Undefined symbol 'mylabel'
+    ```
+    
+    Solution: Check spelling and ensure label is defined:
+    ```asm
+    mylabel:     ; Define label
+        ret
+    ```
+  </Accordion>
+
+  <Accordion title="Invalid instruction">
+    ```
+    Error: Invalid instruction
+    ```
+    
+    Solution: Check Z80 instruction syntax:
+    ```asm
+    ld a, 0      ; Correct
+    load a, 0    ; Invalid - use 'ld'
+    ```
+  </Accordion>
+
+  <Accordion title="File not found">
+    ```
+    Error: Cannot open file 'sprites.asm'
+    ```
+    
+    Solution: Check include path is relative to current file:
+    ```asm
+    include "sprites.asm"     ; Same directory
+    include "../common.asm"   ; Parent directory
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Official Documentation
+
+- [ABASM GitHub](https://github.com/fragarco/abasm)
+- [ABASM Documentation](https://github.com/fragarco/abasm/tree/master/docs)
+- [ABASM Examples](https://github.com/fragarco/abasm/tree/master/examples)
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="ASM Project Example" icon="file-code" href="/examples/asm-project">
+    Complete pure ASM project
+  </Card>
+  <Card title="Compiling Code" icon="hammer" href="/guides/compiling-code">
+    Build process details
+  </Card>
+</CardGroup>
+
+## Credits
+
+**ABASM** created by **fragarco**  
+License: See [ABASM repository](https://github.com/fragarco/abasm)

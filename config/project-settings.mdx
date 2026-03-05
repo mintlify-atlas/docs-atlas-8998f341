@@ -1,0 +1,187 @@
+---
+title: 'Project Settings'
+description: 'Configure basic project information and output directories'
+icon: 'gear'
+---
+
+## Overview
+
+Project settings define the core configuration for your DevCPC project, including the project name, build level, and output directories.
+
+## Required Settings
+
+### PROJECT_NAME
+
+The name of your project, used for naming output files (DSK, CDT, CPR).
+
+```bash devcpc.conf
+PROJECT_NAME="my_game"
+```
+
+- **Type**: String (required)
+- **Usage**: Names the output files (`my_game.dsk`, `my_game.cdt`, etc.)
+- **Recommendation**: Use alphanumeric characters and underscores only
+
+### BUILD_LEVEL
+
+Defines which 8BP functionalities to include in the compilation.
+
+```bash devcpc.conf
+BUILD_LEVEL=0
+```
+
+- **Type**: Integer (0-4)
+- **Default**: 0
+- **Required for**: 8BP projects only
+
+| Level | Description | Memory | Commands | Size |
+|-------|-------------|--------|----------|------|
+| **0** | All features | 23599 | `\|LAYOUT`, `\|COLAY`, `\|MAP2SP`, `\|UMA`, `\|3D` | 19120 bytes |
+| **1** | Maze games | 24999 | `\|LAYOUT`, `\|COLAY` | 17620 bytes |
+| **2** | Scroll games | 24799 | `\|MAP2SP`, `\|UMA` | 17820 bytes |
+| **3** | Pseudo-3D games | 23999 | `\|3D` | 18620 bytes |
+| **4** | Basic (no scroll/layout) | 25299 | Basic commands | 17320 bytes |
+
+<Tip>
+Use the highest BUILD_LEVEL possible for your game to maximize available BASIC memory.
+</Tip>
+
+## Output Directories
+
+### OBJ_DIR
+
+Directory for intermediate compilation files.
+
+```bash devcpc.conf
+OBJ_DIR="obj"
+```
+
+- **Type**: String (optional)
+- **Default**: `"obj"`
+- **Contains**: `.bin`, `.lst`, `.map`, `.ihx`, `.scn` files
+
+### DIST_DIR
+
+Directory for final distribution files.
+
+```bash devcpc.conf
+DIST_DIR="dist"
+```
+
+- **Type**: String (optional)
+- **Default**: `"dist"`
+- **Contains**: `.dsk`, `.cdt`, `.cpr` files
+
+## Output File Names
+
+### DSK
+
+Name of the disk image file.
+
+```bash devcpc.conf
+DSK="${PROJECT_NAME}.dsk"
+```
+
+- **Type**: String (optional)
+- **Default**: `"${PROJECT_NAME}.dsk"`
+- **Location**: `${DIST_DIR}/${DSK}`
+
+### CDT
+
+Name of the cassette tape file (optional).
+
+```bash devcpc.conf
+CDT="${PROJECT_NAME}.cdt"
+```
+
+- **Type**: String (optional)
+- **Default**: None (commented out)
+- **Location**: `${DIST_DIR}/${CDT}`
+- **Requires**: `CDT_FILES` must also be configured
+
+<Info>
+Uncomment this line to enable CDT generation during build.
+</Info>
+
+### CDT_FILES
+
+List of files to include in the CDT tape (order matters).
+
+```bash devcpc.conf
+CDT_FILES="loader.bas 8BP0.bin main.bin"
+```
+
+- **Type**: Space-separated string
+- **Required for**: CDT generation
+- **Order**: Files are loaded sequentially in the order specified
+- **Source**: Files must exist in `${OBJ_DIR}/` and be registered in `${PROJECT_NAME}.map`
+
+<Warning>
+The order of files in `CDT_FILES` is critical. List loader files first, then binaries in load order.
+</Warning>
+
+**Supported file types:**
+- `.bas` - BASIC programs (tokenized)
+- `.bin` - Machine code binaries (with AMSDOS header)
+- `.scn` - Screen files (16KB at &C000)
+- `.txt` - Raw data files
+
+### CPR
+
+Name of the cartridge file for GX-4000/CPC Plus (optional).
+
+```bash devcpc.conf
+CPR="${PROJECT_NAME}.cpr"
+```
+
+- **Type**: String (optional)
+- **Default**: None (commented out)
+- **Location**: `${DIST_DIR}/${CPR}`
+- **Compatible with**: GX-4000, CPC 464+, CPC 6128+
+
+### CPR_EXECUTE
+
+File to auto-execute when the cartridge starts.
+
+```bash devcpc.conf
+CPR_EXECUTE="loader.bas"
+```
+
+- **Type**: String
+- **Required for**: CPR generation
+- **Format**: Just the filename (e.g., `"loader.bas"`, `"8BP0.BIN"`, `"disc"`)
+- **Note**: Do NOT include the `run"..."` command - DevCPC adds this automatically
+
+## Example Configuration
+
+```bash devcpc.conf
+# Basic project settings
+PROJECT_NAME="space_invaders"
+BUILD_LEVEL=0
+
+# Output directories
+OBJ_DIR="obj"
+DIST_DIR="dist"
+
+# Output files
+DSK="${PROJECT_NAME}.dsk"
+CDT="${PROJECT_NAME}.cdt"
+CPR="${PROJECT_NAME}.cpr"
+
+# CDT configuration
+CDT_FILES="intro.bas title.scn loader.bas 8BP0.bin game.bin"
+
+# CPR configuration
+CPR_EXECUTE="loader.bas"
+```
+
+This generates:
+- `dist/space_invaders.dsk` - Disk image (all files)
+- `dist/space_invaders.cdt` - Cassette tape (files in CDT_FILES order)
+- `dist/space_invaders.cpr` - Cartridge (boots to loader.bas)
+
+## See Also
+
+- [Build Options](/config/build-options) - Compilation flags and options
+- [Paths Configuration](/config/paths) - Source file paths
+- [Emulator Settings](/config/emulator) - RetroVirtualMachine configuration

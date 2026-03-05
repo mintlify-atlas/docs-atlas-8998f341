@@ -1,0 +1,235 @@
+---
+title: Creating Projects
+description: Learn how to create and initialize new DevCPC projects with different templates
+---
+
+## Overview
+
+DevCPC provides a simple command to create new projects with a complete structure and configuration. You can choose from multiple templates to start with different development approaches.
+
+## Creating a New Project
+
+Use the `devcpc new` command to create a new project:
+
+```bash
+devcpc new <project-name>
+```
+
+### Example
+
+```bash
+devcpc new my-game
+cd my-game
+```
+
+## Project Templates
+
+When creating a project, you can select from three templates:
+
+### 8BP Template (Default)
+
+For developing games with the 8BP library:
+
+```bash
+devcpc new my-game
+# Select template: 8BP
+```
+
+Includes:
+- 8BP assembly structure
+- Example `make_all_mygame.asm`
+- Pre-configured for BUILD_LEVEL support
+- Sprite and screen asset folders
+
+### ASM Template
+
+For pure assembly projects without 8BP:
+
+```bash
+devcpc new my-program
+# Select template: asm
+```
+
+Includes:
+- Basic assembly structure
+- ABASM configuration
+- No BUILD_LEVEL (direct assembly)
+
+### BASIC Template
+
+For BASIC development:
+
+```bash
+devcpc new my-basic-program
+# Select template: basic
+```
+
+Includes:
+- BASIC file structure
+- Example loader program
+- DSK/CDT configuration
+
+## Generated Structure
+
+After running `devcpc new`, the following structure is created:
+
+```
+my-game/
+├── devcpc.conf          # Project configuration
+├── README.md            # Project documentation
+├── .gitignore          # Git ignore rules
+│
+├── ASM/                # Assembly source files
+│   └── make_all_mygame.asm
+│
+├── bas/                # BASIC programs
+│   └── loader.bas
+│
+├── assets/             # Game resources
+│   ├── sprites/        # Sprite PNG files
+│   └── screen/         # Screen PNG files
+│
+├── obj/                # Compiled objects (generated)
+└── dist/               # Final DSK/CDT/CPR (generated)
+```
+
+## Created Files
+
+### devcpc.conf
+
+The main configuration file with pre-configured settings:
+
+```bash
+PROJECT_NAME="my-game"
+BUILD_LEVEL=0
+ASM_PATH="asm/make_all_mygame.asm"
+BASIC_PATH="bas"
+OBJ_DIR="obj"
+DIST_DIR="dist"
+DSK="${PROJECT_NAME}.dsk"
+```
+
+### README.md
+
+Project documentation with:
+- Quick start instructions
+- Build commands
+- Configuration examples
+- Usage guidelines
+
+### .gitignore
+
+Pre-configured to ignore:
+- `obj/` - Generated object files
+- `dist/` - Generated DSK/CDT/CPR files
+- `*.backup` - Backup files
+- `*.bak` - Temporary files
+
+## Directory Structure Explained
+
+### Source Directories
+
+<CodeGroup>
+```text ASM/
+Assembly source code
+- 8BP: make_all_*.asm files
+- Pure ASM: your .asm files
+```
+
+```text bas/
+BASIC programs
+- .bas files
+- Loaders
+- Menus
+```
+
+```text assets/
+Game resources
+- sprites/: PNG sprite images
+- screen/: PNG loading screens
+```
+</CodeGroup>
+
+### Generated Directories
+
+<CodeGroup>
+```text obj/
+Compiled intermediates
+- .bin files
+- .lst listings
+- .map memory maps
+- .scn screen files
+```
+
+```text dist/
+Final distributions
+- .dsk disk images
+- .cdt tape images
+- .cpr cartridge files
+```
+</CodeGroup>
+
+## Next Steps
+
+After creating your project:
+
+1. **Configure** - Edit `devcpc.conf` for your needs
+2. **Add Code** - Place your ASM/BASIC files in appropriate directories
+3. **Add Assets** - Add PNG sprites and screens to `assets/`
+4. **Build** - Run `devcpc build` to compile
+5. **Test** - Use `devcpc run` to test in emulator
+
+## Verification
+
+Verify your project structure:
+
+```bash
+# Check directory structure
+ls -la
+
+# Validate configuration
+devcpc validate
+
+# View project info
+devcpc info
+```
+
+## Common Configurations
+
+### 8BP Game Project
+
+```bash
+PROJECT_NAME="space-shooter"
+BUILD_LEVEL=2  # Scroll games
+ASM_PATH="asm/make_all_mygame.asm"
+BASIC_PATH="bas"
+SPRITES_PATH="assets/sprites"
+LOADER_SCREEN="assets/screen"
+MODE=0
+```
+
+### Pure ASM Project
+
+```bash
+PROJECT_NAME="demo"
+# No BUILD_LEVEL for pure ASM
+SOURCE="main"
+TARGET="program"
+LOADADDR="0x4000"
+ASM_PATH="asm"
+```
+
+### BASIC with Graphics
+
+```bash
+PROJECT_NAME="menu-system"
+BASIC_PATH="bas"
+LOADER_SCREEN="assets/screen"
+MODE=1
+```
+
+## See Also
+
+- [Compiling Code](/guides/compiling-code) - Build your project
+- [Graphics Conversion](/guides/graphics-conversion) - Convert PNG sprites
+- [Disk Images](/guides/disk-images) - Create DSK files

@@ -1,0 +1,526 @@
+---
+title: Emulator Integration
+description: Testing your Amstrad CPC projects with RetroVirtualMachine
+---
+
+## Overview
+
+DevCPC integrates with RetroVirtualMachine (RVM) for instant testing of your projects. Run your game or program directly from the command line with automatic emulator launching.
+
+## Supported Emulator
+
+DevCPC officially supports **RetroVirtualMachine v2.0 BETA-1 R7** (10/07/2019).
+
+<Warning>
+Only version **v2.0 BETA-1 R7** has development features enabled. Newer versions may not support command-line automation.
+</Warning>
+
+### Download RVM
+
+- **Official website:** [retrovirtualmachine.org](https://www.retrovirtualmachine.org)
+- **Download page:** [Downloads](https://www.retrovirtualmachine.org/download)
+- **Required version:** v2.0 BETA-1 R7 (10/07/2019)
+
+## Configuration
+
+Add to your `devcpc.conf`:
+
+```bash
+# Path to RetroVirtualMachine executable
+RVM_PATH="/Applications/Retro Virtual Machine 2.app/Contents/MacOS/Retro Virtual Machine 2"
+
+# CPC model to emulate (464, 664, or 6128)
+CPC_MODEL=464
+
+# File to auto-execute (DSK mode only)
+RUN_FILE="8BP0.BIN"
+
+# Execution mode: "auto", "dsk", or "cdt"
+RUN_MODE="auto"
+```
+
+## RVM_PATH Configuration
+
+### macOS
+
+```bash
+RVM_PATH="/Applications/Retro Virtual Machine 2.app/Contents/MacOS/Retro Virtual Machine 2"
+```
+
+### Linux
+
+```bash
+RVM_PATH="/usr/local/bin/RetroVirtualMachine"
+```
+
+### Windows (WSL)
+
+```bash
+RVM_PATH="/mnt/c/Program Files/RetroVirtualMachine/RetroVirtualMachine.exe"
+```
+
+## CPC Model Selection
+
+Choose which CPC model to emulate:
+
+```bash
+# Amstrad CPC 464 (cassette only)
+CPC_MODEL=464
+
+# Amstrad CPC 664 (disk + cassette)
+CPC_MODEL=664
+
+# Amstrad CPC 6128 (disk + cassette, 128KB RAM)
+CPC_MODEL=6128
+```
+
+| Model | RAM | Storage | Best For |
+|-------|-----|---------|----------|
+| **464** | 64KB | Tape only | Tape testing, retro feel |
+| **664** | 64KB | Disk + Tape | Disk development |
+| **6128** | 128KB | Disk + Tape | Full development |
+
+## Running Your Project
+
+### Basic Usage
+
+```bash
+# Build and run
+devcpc build && devcpc run
+
+# Just run (if already built)
+devcpc run
+```
+
+### Execution Modes
+
+DevCPC supports three execution modes:
+
+```bash
+# Auto mode (default) - detects DSK or CDT
+devcpc run
+
+# Force disk mode
+devcpc run --dsk
+
+# Force tape mode
+devcpc run --cdt
+```
+
+## RUN_MODE Setting
+
+Configure default behavior in `devcpc.conf`:
+
+```bash
+RUN_MODE="auto"  # Default
+```
+
+### Mode Comparison
+
+| Mode | Behavior | When Used |
+|------|----------|------------|
+| **auto** | Uses CDT if configured, else DSK | Most projects (default) |
+| **dsk** | Always mounts DSK | Disk-only projects |
+| **cdt** | Always mounts CDT | Tape-only projects |
+
+### Auto Mode Logic
+
+```bash
+RUN_MODE="auto"
+```
+
+**Decision flow:**
+1. Check if `CDT` and `CDT_FILES` are configured
+2. If yes → mount CDT and auto-play tape
+3. If no → mount DSK and execute `RUN_FILE`
+
+### DSK Mode
+
+```bash
+RUN_MODE="dsk"
+```
+
+**Behavior:**
+- Always mounts the DSK file
+- Executes `RUN_FILE` if configured
+- Ignores CDT even if configured
+
+**Usage:**
+```bash
+RUN_FILE="8BP0.BIN"
+RUN_MODE="dsk"
+```
+
+**CPC commands executed:**
+```basic
+RUN"8BP0.BIN"
+```
+
+### CDT Mode
+
+```bash
+RUN_MODE="cdt"
+```
+
+**Behavior:**
+- Always mounts the CDT file
+- Auto-plays tape with `RUN"`
+- Switches to tape on 664/6128
+
+**Usage:**
+```bash
+CDT="${PROJECT_NAME}.cdt"
+CDT_FILES="loader.bas 8BP0.bin"
+RUN_MODE="cdt"
+```
+
+**CPC commands executed (464):**
+```basic
+RUN"
+```
+
+**CPC commands executed (664/6128):**
+```basic
+|TAPE
+RUN"
+```
+
+## Auto-Execute Configuration
+
+### DSK Auto-Execute
+
+Specify file to run automatically:
+
+```bash
+RUN_FILE="8BP0.BIN"
+```
+
+DevCPC will execute:
+```basic
+RUN"8BP0.BIN"
+```
+
+**Examples:**
+```bash
+# Run compiled binary
+RUN_FILE="8BP0.BIN"
+
+# Run BASIC loader
+RUN_FILE="LOADER.BAS"
+
+# Run specific program
+RUN_FILE="GAME.BIN"
+```
+
+### CDT Auto-Execute
+
+CDT always auto-plays with `RUN"` - no configuration needed.
+
+Files load in order specified by `CDT_FILES`:
+
+```bash
+CDT_FILES="loader.bas 8BP0.bin"
+```
+
+## Automatic Features
+
+### Session Management
+
+DevCPC automatically:
+- **Closes previous sessions** - Kills old RVM instances
+- **Launches fresh instance** - Starts clean emulator
+- **Mounts media** - Loads DSK or CDT
+- **Executes program** - Runs specified file
+
+### Model-Specific Handling
+
+**CPC 464 (tape only):**
+```bash
+CPC_MODEL=464
+RUN_MODE="cdt"
+```
+Executes: `RUN"`
+
+**CPC 664/6128 (disk + tape):**
+```bash
+CPC_MODEL=6128
+RUN_MODE="cdt"
+```
+Executes: `|TAPE` then `RUN"`
+
+### Background Execution
+
+RVM runs in the background - you can continue working in the terminal.
+
+## Complete Configuration Examples
+
+### 8BP Game Project (macOS)
+
+```bash
+# devcpc.conf
+PROJECT_NAME="space-invaders"
+BUILD_LEVEL=0
+
+# Compilation
+ASM_PATH="asm/make_all_mygame.asm"
+BASIC_PATH="bas"
+SPRITES_PATH="assets/sprites"
+LOADER_SCREEN="assets/screen"
+
+# Output
+DSK="${PROJECT_NAME}.dsk"
+
+# Emulator (macOS)
+RVM_PATH="/Applications/Retro Virtual Machine 2.app/Contents/MacOS/Retro Virtual Machine 2"
+CPC_MODEL=464
+RUN_FILE="8BP0.BIN"
+RUN_MODE="auto"
+```
+
+### Multi-Format Project (Linux)
+
+```bash
+# devcpc.conf
+PROJECT_NAME="platformer"
+BUILD_LEVEL=2
+
+# Compilation
+ASM_PATH="asm/make_all_mygame.asm"
+BASIC_PATH="bas"
+
+# Output (all formats)
+DSK="${PROJECT_NAME}.dsk"
+CDT="${PROJECT_NAME}.cdt"
+CDT_FILES="loader.bas 8BP2.bin"
+
+# Emulator (Linux)
+RVM_PATH="/usr/local/bin/RetroVirtualMachine"
+CPC_MODEL=6128
+RUN_FILE="8BP2.BIN"
+RUN_MODE="auto"  # Uses CDT if available
+```
+
+### Tape-Only Project (Windows WSL)
+
+```bash
+# devcpc.conf
+PROJECT_NAME="demo"
+BUILD_LEVEL=0
+
+# Compilation
+ASM_PATH="asm/make_all_mygame.asm"
+BASIC_PATH="bas"
+LOADER_SCREEN="assets/screen"
+
+# Output (tape focus)
+DSK="${PROJECT_NAME}.dsk"
+CDT="${PROJECT_NAME}.cdt"
+CDT_FILES="intro.bas title.scn loader.bas 8BP0.bin"
+
+# Emulator (Windows WSL)
+RVM_PATH="/mnt/c/Program Files/RetroVirtualMachine/RetroVirtualMachine.exe"
+CPC_MODEL=464
+RUN_MODE="cdt"  # Always use tape
+```
+
+## Workflow Examples
+
+### Rapid Development Cycle
+
+```bash
+# Edit code
+vim asm/make_all_mygame.asm
+
+# Build and test
+devcpc build && devcpc run
+
+# Iterate
+# (emulator launches automatically)
+```
+
+### Test Multiple Formats
+
+```bash
+# Build once
+devcpc build
+
+# Test disk version
+devcpc run --dsk
+
+# Test tape version
+devcpc run --cdt
+```
+
+### Different Models
+
+```bash
+# Edit config for testing
+CPC_MODEL=464  # Test on 464
+devcpc run
+
+CPC_MODEL=6128  # Test on 6128
+devcpc run
+```
+
+## Execution Output Example
+
+```bash
+$ devcpc run
+
+═══════════════════════════════════════
+  Ejecutar Proyecto: space-game
+═══════════════════════════════════════
+
+ℹ Modo: auto
+ℹ CPC Model: 464
+ℹ Archivo: 8BP0.BIN
+
+→ Cerrando sesiones anteriores de RVM...
+✓ Sesiones cerradas
+
+→ Iniciando RetroVirtualMachine...
+ℹ Montando: dist/space-game.dsk
+ℹ Ejecutando: RUN"8BP0.BIN"
+
+✓ Emulador lanzado
+```
+
+## Command-Line Override
+
+### Override RUN_MODE
+
+```bash
+# Config says "auto", force disk
+devcpc run --dsk
+
+# Config says "dsk", force tape
+devcpc run --cdt
+```
+
+Command-line arguments **always override** config file.
+
+### Use Cases
+
+**Quick testing:**
+```bash
+# Usually test with disk (fast)
+devcpc run --dsk
+
+# Occasionally test tape version
+devcpc run --cdt
+```
+
+**Format validation:**
+```bash
+# Ensure both formats work
+devcpc build
+devcpc run --dsk  # Test disk
+devcpc run --cdt  # Test tape
+```
+
+## Troubleshooting
+
+### RVM Not Found
+
+**Error:** "RVM_PATH not configured or invalid"
+
+**Solution:**
+```bash
+# Find RVM location
+which RetroVirtualMachine
+
+# macOS example
+ls "/Applications/Retro Virtual Machine 2.app/Contents/MacOS/"
+
+# Update devcpc.conf
+RVM_PATH="/correct/path/to/RetroVirtualMachine"
+```
+
+### Wrong RVM Version
+
+**Error:** Command-line arguments not working
+
+**Solution:**
+- Download v2.0 BETA-1 R7 (10/07/2019)
+- This is the only version with dev features
+- Newer versions removed CLI automation
+
+### File Not Auto-Executing
+
+**DSK mode:**
+```bash
+# Check RUN_FILE is set
+RUN_FILE="8BP0.BIN"
+
+# Verify file exists on DSK
+python3 ~/.DevCPC/tools/abasm/src/dsk.py dist/game.dsk --dir
+```
+
+**CDT mode:**
+```bash
+# Check file order
+CDT_FILES="loader.bas 8BP0.bin"
+
+# Loader should execute other files
+```
+
+### Emulator Crashes
+
+**Check build:**
+```bash
+# Rebuild cleanly
+devcpc clean
+devcpc build
+
+# Test DSK manually first
+open dist/my-game.dsk
+```
+
+**Check memory:**
+```bash
+# Verify MEMORY setting matches BUILD_LEVEL
+BUILD_LEVEL=0  # → MEMORY 23599
+BUILD_LEVEL=2  # → MEMORY 24799
+```
+
+### Multiple RVM Instances
+
+DevCPC should close old instances, but if not:
+
+```bash
+# macOS/Linux
+pkill -f "Retro Virtual Machine"
+
+# Then run again
+devcpc run
+```
+
+## Best Practices
+
+1. **Configure once** - Set RVM_PATH at project start
+2. **Use auto mode** - Let DevCPC choose DSK/CDT
+3. **Test frequently** - Run after each change
+4. **Override when needed** - Use `--dsk`/`--cdt` for testing
+5. **Check versions** - Ensure RVM v2.0 BETA-1 R7
+
+## Without Emulator Integration
+
+If RVM is not configured, you can still:
+
+```bash
+# Build project
+devcpc build
+
+# Open DSK manually
+open dist/my-game.dsk
+
+# Or drag to emulator
+# Or copy to M4 Board
+```
+
+## See Also
+
+- [Compiling Code](/guides/compiling-code) - Build your project
+- [Disk Images](/guides/disk-images) - DSK format
+- [Tape Images](/guides/tape-images) - CDT format
+- [Creating Projects](/guides/creating-projects) - Initial setup

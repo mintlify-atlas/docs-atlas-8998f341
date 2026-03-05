@@ -1,0 +1,510 @@
+---
+title: 'Graphics Configuration'
+description: 'PNG sprite and screen conversion settings'
+icon: 'image'
+---
+
+## Overview
+
+DevCPC can automatically convert PNG images to Amstrad CPC formats during the build process:
+- **Sprites**: PNG → ASM data files for use in your game
+- **Screens**: PNG → SCN binary files for loading screens
+
+<Info>
+Requires Python Pillow library: `pip3 install Pillow`
+</Info>
+
+## CPC Video Modes
+
+The `MODE` setting determines the video mode for all graphics conversions.
+
+### MODE=0: 16 Colors
+
+```bash devcpc.conf
+MODE=0
+```
+
+- **Resolution**: 160×200 pixels
+- **Colors**: 16 simultaneous colors (from 27-color palette)
+- **Encoding**: 2 pixels per byte (4 bits per pixel)
+- **Best for**: Colorful games, detailed sprites, most projects
+
+**PNG Requirements:**
+- Width: Multiple of 2 pixels
+- Height: Any
+- Colors: Maximum 16 colors
+- For screens: Exactly 160×200 pixels
+
+### MODE=1: 4 Colors
+
+```bash devcpc.conf
+MODE=1
+```
+
+- **Resolution**: 320×200 pixels
+- **Colors**: 4 simultaneous colors (from 27-color palette)
+- **Encoding**: 4 pixels per byte (2 bits per pixel)
+- **Best for**: Higher resolution games, text-heavy interfaces
+
+**PNG Requirements:**
+- Width: Multiple of 4 pixels
+- Height: Any
+- Colors: Maximum 4 colors
+- For screens: Exactly 320×200 pixels
+
+### MODE=2: 2 Colors
+
+```bash devcpc.conf
+MODE=2
+```
+
+- **Resolution**: 640×200 pixels
+- **Colors**: 2 colors (typically black and white)
+- **Encoding**: 8 pixels per byte (1 bit per pixel)
+- **Best for**: Hi-res monochrome graphics, arcade ports
+
+**PNG Requirements:**
+- Width: Multiple of 8 pixels
+- Height: Any
+- Colors: Maximum 2 colors
+- For screens: Exactly 640×200 pixels
+
+## CPC Color Palette
+
+The Amstrad CPC has a fixed 27-color palette (INK 0-26). DevCPC automatically converts PNG RGB colors to the nearest CPC ink.
+
+### Hardware Palette
+
+| INK | Color | RGB | Hex |
+|-----|-------|-----|-----|
+| 0 | Black | (0,0,0) | #000000 |
+| 1 | Blue (dark) | (0,0,128) | #000080 |
+| 2 | Blue | (0,0,255) | #0000FF |
+| 3 | Red (dark) | (128,0,0) | #800000 |
+| 4 | Magenta (dark) | (128,0,128) | #800080 |
+| 5 | Magenta | (128,0,255) | #8000FF |
+| 6 | Red | (255,0,0) | #FF0000 |
+| 7 | Pink | (255,0,128) | #FF0080 |
+| 8 | Pink (light) | (255,0,255) | #FF00FF |
+| 9 | Green (dark) | (0,128,0) | #008000 |
+| 10 | Cyan (dark) | (0,128,128) | #008080 |
+| 11 | Cyan | (0,128,255) | #0080FF |
+| 12 | Yellow (dark) | (128,128,0) | #808000 |
+| 13 | Gray | (128,128,128) | #808080 |
+| 14 | Blue (pastel) | (128,128,255) | #8080FF |
+| 15 | Orange | (255,128,0) | #FF8000 |
+| 16 | Pink (pastel) | (255,128,128) | #FF8080 |
+| 17 | Lilac | (255,128,255) | #FF80FF |
+| 18 | Green | (0,255,0) | #00FF00 |
+| 19 | Aqua | (0,255,128) | #00FF80 |
+| 20 | Cyan (light) | (0,255,255) | #00FFFF |
+| 21 | Yellow-green | (128,255,0) | #80FF00 |
+| 22 | Green (pastel) | (128,255,128) | #80FF80 |
+| 23 | Cyan (pastel) | (128,255,255) | #80FFFF |
+| 24 | Yellow | (255,255,0) | #FFFF00 |
+| 25 | Yellow (pastel) | (255,255,128) | #FFFF80 |
+| 26 | White | (255,255,255) | #FFFFFF |
+
+<Tip>
+Use these exact RGB values in your PNG for perfect color matching, or use `SPRITES_TOLERANCE` to allow close matches.
+</Tip>
+
+## Sprite Configuration
+
+### SPRITES_PATH
+
+Directory containing PNG sprite files.
+
+```bash devcpc.conf
+SPRITES_PATH="assets/sprites"
+```
+
+- **Type**: Directory path
+- **Search**: Recursive (includes all subdirectories)
+- **Process**: Converts all PNG files to ASM format
+- **Timing**: Runs before ASM compilation during `devcpc build`
+
+### SPRITES_OUT_FILE
+
+Output file for generated sprite data.
+
+```bash devcpc.conf
+SPRITES_OUT_FILE="ASM/sprites.asm"
+```
+
+- **Type**: File path
+- **Default**: `"sprites.asm"` (in project root)
+- **Format**: ASM file with sprite data and palette information
+- **Usage**: Include in your ASM with `include "sprites.asm"`
+
+**Generated ASM structure:**
+```asm
+; MODE 0
+
+PLAYER
+;------ BEGIN IMAGE --------
+  db 2          ; width in bytes
+  db 16         ; height in pixels
+  db 0, 0       ; sprite data
+  db 85, 85
+  ; ... more bytes ...
+;------ END IMAGE --------
+  ; Palette (PEN -> INK) detected in PNG
+  ; INK 0,0
+  ; INK 1,24
+  ; INK 2,6
+```
+
+### SPRITES_TOLERANCE
+
+RGB color matching tolerance.
+
+```bash devcpc.conf
+SPRITES_TOLERANCE=8
+```
+
+- **Type**: Integer
+- **Values**:
+  - `0` = Exact match (RGB must exactly match CPC palette)
+  - `1-255` = Tolerance in RGB delta (8 is recommended)
+  - `-1` = Automatic (always finds closest color)
+- **Default**: 8
+- **Recommendation**: Use 8 for most projects
+
+**How tolerance works:**
+```
+PNG color: RGB(250, 248, 0)
+CPC INK 24: RGB(255, 255, 0)
+
+Delta: sqrt((250-255)² + (248-255)² + (0-0)²) = 8.6
+
+TOLERANCE=0:  ✗ Too different, error
+TOLERANCE=8:  ✗ Exceeds tolerance, error
+TOLERANCE=9:  ✓ Within tolerance, uses INK 24
+TOLERANCE=-1: ✓ Uses closest match (INK 24)
+```
+
+### SPRITES_TRANSPARENT_INK
+
+INK to use for transparent pixels.
+
+```bash devcpc.conf
+SPRITES_TRANSPARENT_INK=""
+```
+
+- **Type**: Integer (0-26) or empty
+- **Default**: Empty (no special transparency handling)
+- **Usage**: Maps PNG alpha=0 pixels to specified INK
+- **Example**: `SPRITES_TRANSPARENT_INK=0` treats transparent pixels as black
+
+<Info>
+Leave empty for no transparency, or set to your background INK color.
+</Info>
+
+## Screen Configuration
+
+### LOADER_SCREEN
+
+Directory containing PNG loading screen files.
+
+```bash devcpc.conf
+LOADER_SCREEN="assets/screen"
+```
+
+- **Type**: Directory path
+- **Search**: Recursive (includes all subdirectories)
+- **Process**: Converts PNG to SCN format (16KB binary screen dump)
+- **Address**: SCN files load at &C000 (video memory)
+- **Timing**: Runs before ASM compilation during `devcpc build`
+
+**Output files:**
+- `obj/filename.scn` - Binary screen dump (16384 bytes)
+- `obj/filename.scn.info` - Palette and format information
+
+## Sprite Conversion Examples
+
+### Example 1: Simple Sprites
+
+**Configuration:**
+```bash devcpc.conf
+MODE=0
+SPRITES_PATH="assets/sprites"
+SPRITES_OUT_FILE="ASM/sprites.asm"
+SPRITES_TOLERANCE=8
+```
+
+**Directory structure:**
+```
+assets/sprites/
+├── player.png      (16×16, 4 colors)
+├── enemy1.png      (16×16, 3 colors)
+└── bullet.png      (4×8, 2 colors)
+```
+
+**Build output:**
+```
+✓ Sprites convertidos exitosamente
+
+Resumen:
+PNG           Label      Size(px)  Bytes/line  Colors  Status
+player.png    PLAYER     16x16     2           4       OK
+enemy1.png    ENEMY1     16x16     2           3       OK
+bullet.png    BULLET     4x8       1           2       OK
+```
+
+**Usage in ASM:**
+```asm
+include "sprites.asm"
+
+ld hl, PLAYER
+call |PSPRITE
+```
+
+### Example 2: Organized Sprites
+
+**Configuration:**
+```bash devcpc.conf
+MODE=0
+SPRITES_PATH="assets/sprites"
+SPRITES_OUT_FILE="ASM/graphics/sprites.asm"
+SPRITES_TOLERANCE=-1  ; Auto-match colors
+```
+
+**Directory structure:**
+```
+assets/sprites/
+├── characters/
+│   ├── player_walk1.png
+│   ├── player_walk2.png
+│   └── player_jump.png
+├── enemies/
+│   ├── bat.png
+│   └── spider.png
+└── items/
+    ├── coin.png
+    └── key.png
+```
+
+All PNG files are found recursively and converted to `ASM/graphics/sprites.asm`.
+
+## Screen Conversion Examples
+
+### Example 3: Loading Screens
+
+**Configuration:**
+```bash devcpc.conf
+MODE=0
+LOADER_SCREEN="assets/screen"
+```
+
+**Directory structure:**
+```
+assets/screen/
+├── title.png       (160×200, 8 colors)
+├── loading.png     (160×200, 4 colors)
+└── credits.png     (160×200, 6 colors)
+```
+
+**Build output:**
+```
+✓ 3 pantalla(s) convertida(s)
+
+→ Añadiendo pantallas al DSK...
+  title.scn
+  loading.scn
+  credits.scn
+✓ 3 pantalla(s) añadida(s) al DSK
+```
+
+**Generated files:**
+```
+obj/
+├── title.scn       (16384 bytes)
+├── title.scn.info  (palette info)
+├── loading.scn
+├── loading.scn.info
+├── credits.scn
+└── credits.scn.info
+```
+
+**Usage in BASIC:**
+```basic
+10 MODE 0
+20 LOAD"TITLE.SCN",&C000
+30 REM Set palette from .scn.info
+40 INK 0,0: INK 1,24: INK 2,6: INK 3,2
+50 PAUSE 200
+```
+
+### Example 4: SCN Info File
+
+**Content of `title.scn.info`:**
+```
+FILE: title.scn
+WIDTH: 160
+HEIGHT: 200
+MODE: 0
+PALETTE COLORS: 8
+
+FW              HW              RGB
+0               0x14            (0, 0, 0)
+24              0x0A            (255, 255, 0)
+6               0x04            (255, 0, 0)
+2               0x02            (0, 0, 255)
+
+; ASM HW palette
+db 0x14, 0x0A, 0x04, 0x02
+
+' BASIC palette
+INK 0,0: INK 1,24: INK 2,6: INK 3,2
+
+// C palette
+hwpal = { 0x14, 0x0A, 0x04, 0x02 }
+```
+
+Use this info to set the correct palette when loading the screen.
+
+## Troubleshooting Graphics
+
+### Error: Pillow Not Installed
+
+**Error:**
+```
+✗ Python Pillow no instalado
+```
+
+**Solution:**
+```bash
+pip3 install Pillow
+
+# Verify
+python3 -c "import PIL; print('Pillow OK')"
+```
+
+### Error: Width Not Divisible
+
+**Error:**
+```
+✗ player.png: ancho 15 no divisible por 2 (MODE 0)
+```
+
+**Solution:** Adjust PNG width to meet mode requirements:
+- Mode 0: Width must be multiple of 2
+- Mode 1: Width must be multiple of 4
+- Mode 2: Width must be multiple of 8
+
+### Error: Too Many Colors
+
+**Error:**
+```
+✗ sprite.png usa 18 INKs pero MODE 0 solo permite 16
+```
+
+**Solution:**
+1. Reduce colors in your PNG editor
+2. Use indexed color mode with CPC palette
+3. Or change to MODE 0 (16 colors) if using MODE 1/2
+
+### Error: Color Not in Palette
+
+**Error:**
+```
+✗ Color RGB(200,100,50) no coincide con paleta CPC
+```
+
+**Solution:**
+1. Increase tolerance: `SPRITES_TOLERANCE=16`
+2. Use auto-match: `SPRITES_TOLERANCE=-1`
+3. Or adjust PNG colors to exact CPC palette values
+
+### Error: Screen Wrong Resolution
+
+**Error:**
+```
+✗ title.png debe ser 160x200 para MODE 0
+```
+
+**Solution:** Screens must be exact resolution:
+- Mode 0: 160×200 pixels
+- Mode 1: 320×200 pixels
+- Mode 2: 640×200 pixels
+
+## Tips
+
+<Tip>
+**Use indexed PNG:** Save PNGs with indexed color mode using the CPC palette for perfect conversion.
+</Tip>
+
+<Tip>
+**Organize by type:** Keep sprites in `assets/sprites/` and screens in `assets/screen/` for clarity.
+</Tip>
+
+<Tip>
+**Check .scn.info:** Always reference the `.scn.info` file for correct palette values when loading screens.
+</Tip>
+
+<Tip>
+**Test tolerance:** Start with `SPRITES_TOLERANCE=8`. If colors don't match, try `-1` for auto-matching.
+</Tip>
+
+## Complete Graphics Example
+
+```bash devcpc.conf
+# Project settings
+PROJECT_NAME="space_game"
+BUILD_LEVEL=0
+
+# Graphics mode
+MODE=0  # 160x200, 16 colors
+
+# Sprite conversion
+SPRITES_PATH="assets/sprites"
+SPRITES_OUT_FILE="ASM/graphics/sprites.asm"
+SPRITES_TOLERANCE=8
+SPRITES_TRANSPARENT_INK=0  # Black = transparent
+
+# Screen conversion
+LOADER_SCREEN="assets/screen"
+
+# Source paths
+ASM_PATH="asm/make_all_space_game.asm"
+BASIC_PATH="bas"
+```
+
+**Project structure:**
+```
+space_game/
+├── devcpc.conf
+├── assets/
+│   ├── sprites/
+│   │   ├── ship.png
+│   │   ├── enemies/
+│   │   │   ├── alien1.png
+│   │   │   └── alien2.png
+│   │   └── bullets/
+│   │       └── laser.png
+│   └── screen/
+│       ├── title.png
+│       └── gameover.png
+├── ASM/
+│   ├── make_all_space_game.asm
+│   └── graphics/
+│       └── sprites.asm  (generated)
+└── bas/
+    └── loader.bas
+```
+
+**Build process:**
+```bash
+devcpc build
+# 1. Converts all PNGs in assets/sprites/ → ASM/graphics/sprites.asm
+# 2. Converts all PNGs in assets/screen/ → obj/*.scn + obj/*.scn.info
+# 3. Compiles ASM (includes sprites.asm)
+# 4. Adds BASIC and SCN files to DSK
+```
+
+## See Also
+
+- [Build Options](/config/build-options) - MODE and build settings
+- [Paths Configuration](/config/paths) - Graphics path details
+- [Build Command](/commands/build) - Compilation workflow

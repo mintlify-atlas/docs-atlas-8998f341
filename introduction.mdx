@@ -1,0 +1,122 @@
+---
+title: Introduction
+description: Overview of DevCPC CLI - SDK for Amstrad CPC development on modern platforms
+---
+
+# Introduction to DevCPC CLI
+
+DevCPC CLI is a modern Software Development Kit (SDK) for developing Amstrad CPC applications using Basic and Z80 assembly on macOS, Linux, and Windows WSL.
+
+## What is DevCPC?
+
+DevCPC was born from the need to compile the [8BP library](https://github.com/jjaranda13/8BP) for Amstrad CPC on non-Windows operating systems natively. Thanks to the [ABASM assembler](https://github.com/fragarco/abasm) created by [fragarco](https://github.com/fragarco), this has been possible. From there, new features have been implemented to facilitate the development of Basic and assembly projects for Amstrad CPC.
+
+## Why Use DevCPC?
+
+<CardGroup cols={2}>
+  <Card title="Cross-Platform" icon="laptop">
+    Develop on macOS, Linux, or Windows WSL with native tooling
+  </Card>
+  <Card title="Automated Workflow" icon="gears">
+    One command to compile, build, and run your CPC projects
+  </Card>
+  <Card title="Modern Tools" icon="wrench">
+    Integrated assembler, disk image creation, and emulator support
+  </Card>
+  <Card title="8BP Integration" icon="gamepad">
+    Full support for the powerful 8BP game development library
+  </Card>
+</CardGroup>
+
+## Key Features
+
+### Automated Compilation
+- ✅ **8BP** - Compilation of the 8BP programming library (make_all_*.asm)
+- ✅ **ASM** - Z80 assembly code compilation
+- ✅ **BASIC** - BASIC file handling and compilation with Abasc (in progress)
+- ✅ **RAW** - Binary files without AMSDOS header
+- ✅ **C** - C code compiled with SDCC for 8BP
+- ✅ **DSK** - Generation of DSK disk images with all project files
+- ✅ **CDT** - Generation of CDT tape images with files in specified order
+- ✅ **CPR** - Generation of CPR cartridges for GX-4000 and CPC Plus
+- ✅ **Retro Virtual Machine** - Test on RVM emulator with a single command
+- ✅ **M4 Board** - Testing on M4 board with a single command (In development)
+- ✅ **Loading Screens** - Create loading screens from PNG images
+- ✅ **Sprites** - Create sprites from PNG images
+- ✅ **Project Creation** - Create projects with Basic, ASM, or 8BP examples
+- ✅ **VS Code Extension** - Extension to facilitate compilation workflow
+
+### Integrated Tools
+- ✅ **[ABASM](https://github.com/fragarco/abasm)** - Z80 assembler
+- ✅ **[dsk.py](https://github.com/fragarco/abasm)** - DSK image management
+- ✅ **[cdt.py](https://github.com/fragarco/abasm)** - CDT tape image management
+- ✅ **[map.py](https://github.com/fragarco/abasm)** - INI configuration file management
+- ✅ **hex2bin** - Conversion for C code (cross-platform)
+- ✅ **[png2asm.py](https://github.com/javy-fernandez/8bp-graphics-converter)** - Automatic PNG to ASM conversion (sprites)
+- ✅ **[img.py](https://github.com/fragarco/abasm)** - Automatic PNG to SCN conversion (screens)
+
+### Optional Tools
+- [SDCC](http://sdcc.sourceforge.net/) - Small Device C Compiler
+- [RetroVirtualMachine](https://www.retrovirtualmachine.org/) - Amstrad CPC Emulator (v2.0 BETA-1 R7 required)
+
+## Supported Platforms
+
+<CardGroup cols={3}>
+  <Card title="macOS" icon="apple">
+    ARM64 and x86_64
+  </Card>
+  <Card title="Linux" icon="linux">
+    ARM64 and x86_64
+  </Card>
+  <Card title="Windows" icon="windows">
+    WSL or Git Bash
+  </Card>
+</CardGroup>
+
+## Requirements
+
+### Core Requirements
+- **Python 3.x** - For build scripts (included)
+
+### Optional Requirements
+- **SDCC** - Only if you want to compile C code
+- **RetroVirtualMachine** - Only if you want to use `devcpc run`
+- **Pillow (Python library)** - Only if you want to convert images to ASM/SCN
+
+<Warning>
+  **Important:** Only version **v2.0 BETA-1 R7 (10/07/2019)** of Retro Virtual Machine is supported, as it is the only version with development options enabled, as indicated on their [website](https://www.retrovirtualmachine.org/blog/future/).
+</Warning>
+
+## What Can You Build?
+
+With DevCPC CLI, you can create:
+- **Games** using the 8BP library or pure Z80 assembly
+- **Applications** combining BASIC and assembly code
+- **Demos** with custom graphics and effects
+- **Tools** compiled from C using SDCC
+
+All packaged as:
+- DSK disk images for standard CPC models
+- CDT tape images for authentic retro experience
+- CPR cartridges for GX-4000 and CPC Plus
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Install DevCPC CLI on your system
+  </Card>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Create your first CPC project
+  </Card>
+</CardGroup>
+
+## License
+
+MIT License - Copyright (c) 2026 Destroyer
+
+## Credits
+
+- **[jjaranda13](https://github.com/jjaranda13)** - Creator of [8BP](https://github.com/jjaranda13/8BP)
+- **[fragarco](https://github.com/fragarco)** - Creator of [ABASM](https://github.com/fragarco/abasm)
+- **[Javi Fernandez](https://github.com/javy-fernandez)** - Creator of [8bp-graphics-converter](https://github.com/javy-fernandez/8bp-graphics-converter)

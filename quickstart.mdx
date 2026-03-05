@@ -1,80 +1,574 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick Start
+description: Create, configure, and build your first Amstrad CPC project with DevCPC CLI
 ---
 
-## Get started in three steps
+# Quick Start Guide
 
-Get your documentation site running locally and make your first customization.
+This guide will walk you through creating your first Amstrad CPC project using DevCPC CLI.
 
-### Step 1: Set up your local environment
+## Create Your First Project
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+Let's create a new project called "my-game":
 
-### Step 2: Deploy your changes
+```bash
+devcpc new my-game
+```
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+### What Gets Created
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+The `devcpc new` command creates a complete project structure:
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+```
+my-game/
+├── devcpc.conf          # Project configuration
+├── README.md            # Project documentation
+├── .gitignore          # Git ignore rules
+│
+├── ASM/                # Assembly code (Z80/8BP)
+├── bas/                # BASIC files
+├── raw/                # Raw binary files
+├── C/                  # C source files (optional)
+│
+├── assets/             # Project resources
+│   ├── sprites/        # PNG sprites (converted to ASM)
+│   └── screen/         # Loading screens (converted to SCN)
+│
+├── obj/                # Generated: intermediate files
+└── dist/               # Generated: final DSK/CDT/CPR
+```
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  The `obj/` and `dist/` directories are created during the build process.
 </Note>
+
+## Navigate to Your Project
+
+```bash
+cd my-game
+```
+
+Let's explore what was created:
+
+```bash
+ls -la
+```
+
+You should see:
+
+```
+total 24
+drwxr-xr-x  8 user  staff   256 Mar  5 10:30 .
+drwxr-xr-x  5 user  staff   160 Mar  5 10:30 ..
+-rw-r--r--  1 user  staff   233 Mar  5 10:30 .gitignore
+drwxr-xr-x  2 user  staff    64 Mar  5 10:30 ASM
+drwxr-xr-x  2 user  staff    64 Mar  5 10:30 assets
+drwxr-xr-x  2 user  staff    64 Mar  5 10:30 bas
+-rw-r--r--  1 user  staff  4579 Mar  5 10:30 devcpc.conf
+-rw-r--r--  1 user  staff  2543 Mar  5 10:30 README.md
+```
+
+## Configure Your Project
+
+Open the `devcpc.conf` file to configure your project:
+
+```bash devcpc.conf
+# Nombre del proyecto (usado para el DSK)
+PROJECT_NAME="my-game"
+
+# Nivel de compilación (0-4)
+# 0 = Todas las funcionalidades (MEMORY 23599)
+# 1 = Juegos de laberintos (MEMORY 24999)
+# 2 = Juegos con scroll (MEMORY 24799)
+# 3 = Juegos pseudo-3D (MEMORY 23999)
+# 4 = Sin scroll/layout +500 bytes (MEMORY 25299)
+BUILD_LEVEL=0
+
+# Ruta al código ensamblador 8BP
+ASM_PATH="asm/make_all_mygame.asm"
+
+# Ruta a archivos BASIC
+BASIC_PATH="bas"
+
+# Rutas opcionales (comenta las que no uses)
+#RAW_PATH="raw"
+#C_PATH="C"
+```
+
+### Understanding BUILD_LEVEL
+
+The `BUILD_LEVEL` determines which 8BP library features are included:
+
+| Level | Description | MEMORY | Commands | Size |
+|-------|-------------|--------|----------|------|
+| **0** | All features | 23599 | \|LAYOUT, \|COLAY, \|MAP2SP, \|UMA, \|3D | 19120 bytes |
+| **1** | Maze games | 24999 | \|LAYOUT, \|COLAY | 17620 bytes |
+| **2** | Scrolling games | 24799 | \|MAP2SP, \|UMA | 17820 bytes |
+| **3** | Pseudo-3D games | 23999 | \|3D | 18620 bytes |
+| **4** | Basic (no scroll/layout) | 25299 | Basic commands | 17320 bytes |
+
+<Tip>
+  Use the highest BUILD_LEVEL possible for your game to have more BASIC memory available.
+</Tip>
+
+## Add Your Code
+
+Now let's add some code to your project.
+
+### Assembly Code
+
+Copy your assembly files to the `ASM/` directory:
+
+```bash
+cp /path/to/your/make_all_mygame.asm ASM/
+cp /path/to/your/*.asm ASM/
+```
+
+### BASIC Files
+
+Create a simple loader in `bas/loader.bas`:
+
+```basic bas/loader.bas
+10 MODE 0
+20 MEMORY 23599
+30 LOAD"8BP0.BIN"
+40 CALL &6B78
+50 REM Your game starts here
+```
+
+Or copy your existing BASIC files:
+
+```bash
+cp /path/to/your/*.bas bas/
+```
+
+## Build Your Project
+
+Now compile everything:
+
+```bash
+devcpc build
+```
+
+### Build Output
+
+You'll see output similar to this:
+
+```
+═══════════════════════════════════════
+  Compilar Proyecto: my-game
+═══════════════════════════════════════
+
+ℹ Build Level: 0 (Todas las funcionalidades)
+ℹ Memoria BASIC: MEMORY 23599
+
+✓ Compilación exitosa
+✓ Límite de gráficos respetado (< 42040)
+✓ DSK creado
+✓ 1 archivo(s) BASIC añadidos
+
+Contenido del DSK:
+0: 8BP0    .BIN  [ st: 0 extend: 0 data pages: 128 ]
+1: LOADER  .BAS  [ st: 0 extend: 0 data pages: 3 ]
+
+✓ Proyecto compilado exitosamente
+```
+
+### What Was Generated
+
+After building, check the generated files:
+
+```bash
+ls -la dist/
+```
+
+You should see:
+
+```
+total 360
+drwxr-xr-x  3 user  staff      96 Mar  5 10:35 .
+drwxr-xr-x  9 user  staff     288 Mar  5 10:35 ..
+-rw-r--r--  1 user  staff  184320 Mar  5 10:35 my-game.dsk
+```
+
+And intermediate files:
+
+```bash
+ls -la obj/
+```
+
+```
+total 400
+drwxr-xr-x  5 user  staff    160 Mar  5 10:35 .
+drwxr-xr-x  9 user  staff    288 Mar  5 10:35 ..
+-rw-r--r--  1 user  staff  19120 Mar  5 10:35 8BP0.bin
+-rw-r--r--  1 user  staff  45678 Mar  5 10:35 8BP0.lst
+-rw-r--r--  1 user  staff   2341 Mar  5 10:35 my-game.map
+```
+
+## Run in Emulator (Optional)
+
+If you have RetroVirtualMachine installed, you can test your project:
+
+<Steps>
+  <Step title="Configure the emulator path">
+    Edit `devcpc.conf` and set your emulator path:
+    
+    ```bash devcpc.conf
+    # macOS example:
+    RVM_PATH="/Applications/Retro Virtual Machine 2.app/Contents/MacOS/Retro Virtual Machine 2"
+    
+    # Linux example:
+    #RVM_PATH="/usr/local/bin/RetroVirtualMachine"
+    
+    # Windows WSL example:
+    #RVM_PATH="/mnt/c/Program Files/RetroVirtualMachine/RetroVirtualMachine.exe"
+    
+    # CPC model (464, 664, or 6128)
+    CPC_MODEL=464
+    
+    # File to auto-run
+    RUN_FILE="8BP0.BIN"
+    ```
+  </Step>
+  
+  <Step title="Run your project">
+    ```bash
+    devcpc run
+    ```
+    
+    This will:
+    1. Close any previous emulator sessions
+    2. Launch RetroVirtualMachine
+    3. Load your DSK image
+    4. Auto-execute the specified file
+  </Step>
+</Steps>
+
+<Warning>
+  Remember: Only RetroVirtualMachine **v2.0 BETA-1 R7 (10/07/2019)** is supported.
+</Warning>
+
+## Project Structure Explained
+
+Let's understand each directory:
+
+### Source Directories
+
+<AccordionGroup>
+  <Accordion title="ASM/ - Assembly Code" icon="code">
+    Contains your Z80 assembly source files for 8BP projects.
+    
+    **Key file:** `make_all_mygame.asm` - Main assembly file that includes all others.
+    
+    Example:
+    ```asm
+    ; make_all_mygame.asm
+    include "graphics.asm"
+    include "music.asm"
+    include "game_logic.asm"
+    ```
+  </Accordion>
+
+  <Accordion title="bas/ - BASIC Files" icon="file-code">
+    Contains BASIC programs that are automatically added to the DSK.
+    
+    Common uses:
+    - `loader.bas` - Loads and initializes your game
+    - `menu.bas` - Game menu
+    - `credits.bas` - Credits screen
+    
+    All `.bas` files in this directory are automatically included in the build.
+  </Accordion>
+
+  <Accordion title="raw/ - Raw Binary Files" icon="file-binary">
+    Contains binary files added to the DSK without AMSDOS headers.
+    
+    Use for:
+    - Custom data files
+    - Pre-compiled binaries
+    - Resource files
+  </Accordion>
+
+  <Accordion title="C/ - C Source Code" icon="c">
+    Optional: Contains C source files compiled with SDCC.
+    
+    Requires:
+    - SDCC installed
+    - `C_PATH`, `C_SOURCE`, and `C_CODE_LOC` configured
+    
+    Example structure:
+    ```
+    C/
+    ├── main.c
+    ├── 8BP_wrapper/
+    │   └── 8BP.h
+    └── mini_BASIC/
+        └── minibasic.h
+    ```
+  </Accordion>
+
+  <Accordion title="assets/ - Graphics Resources" icon="image">
+    Contains PNG images for automatic conversion.
+    
+    **sprites/** - PNG sprites converted to ASM
+    - Mode 0: 16 colors, 2 pixels/byte
+    - Mode 1: 4 colors, 4 pixels/byte
+    - Mode 2: 2 colors, 8 pixels/byte
+    
+    **screen/** - Full-screen PNGs converted to SCN
+    - Mode 0: 160x200 pixels
+    - Mode 1: 320x200 pixels
+    - Mode 2: 640x200 pixels
+  </Accordion>
+</AccordionGroup>
+
+### Generated Directories
+
+<AccordionGroup>
+  <Accordion title="obj/ - Intermediate Files" icon="folder">
+    Created during build. Contains:
+    - `*.bin` - Compiled binary files
+    - `*.lst` - Assembly listings
+    - `*.map` - Memory maps
+    - `*.scn` - Converted screen files
+    - `*.ihx` - Intel HEX files (C)
+    
+    This directory is cleaned with `devcpc clean`.
+  </Accordion>
+
+  <Accordion title="dist/ - Distribution Files" icon="box">
+    Created during build. Contains:
+    - `*.dsk` - DSK disk image
+    - `*.cdt` - CDT tape image (if configured)
+    - `*.cpr` - CPR cartridge (if configured)
+    
+    These are your final, runnable files.
+  </Accordion>
+</AccordionGroup>
+
+## Common Commands
+
+Here are the essential commands you'll use:
+
+<CodeGroup>
+
+```bash Build
+# Compile your project
+devcpc build
+```
+
+```bash Clean
+# Clean generated files
+devcpc clean
+```
+
+```bash Info
+# Show project configuration
+devcpc info
+```
+
+```bash Validate
+# Check project before building
+devcpc validate
+```
+
+```bash Run
+# Run in emulator
+devcpc run
+
+# Force DSK or CDT
+devcpc run --dsk
+devcpc run --cdt
+```
+
+</CodeGroup>
+
+## Build Workflow
+
+A typical development workflow looks like this:
+
+<Steps>
+  <Step title="Create project">
+    ```bash
+    devcpc new my-game
+    cd my-game
+    ```
+  </Step>
+  
+  <Step title="Configure settings">
+    Edit `devcpc.conf` to set:
+    - Project name
+    - Build level
+    - Source paths
+    - Emulator settings (optional)
+  </Step>
+  
+  <Step title="Add your code">
+    Copy or create your:
+    - Assembly files in `ASM/`
+    - BASIC files in `bas/`
+    - Graphics in `assets/`
+  </Step>
+  
+  <Step title="Validate project">
+    ```bash
+    devcpc validate
+    ```
+    
+    This checks:
+    - Configuration is correct
+    - Required files exist
+    - Paths are valid
+  </Step>
+  
+  <Step title="Build">
+    ```bash
+    devcpc build
+    ```
+    
+    This:
+    - Converts PNG graphics
+    - Compiles assembly
+    - Creates DSK/CDT/CPR
+    - Adds all files
+  </Step>
+  
+  <Step title="Test">
+    ```bash
+    devcpc run
+    ```
+    
+    Or load `dist/my-game.dsk` in your emulator.
+  </Step>
+  
+  <Step title="Iterate">
+    Make changes, then:
+    ```bash
+    devcpc build && devcpc run
+    ```
+  </Step>
+</Steps>
+
+## Example: Complete Build
+
+Let's create a complete example project from scratch:
+
+```bash
+# Create project
+devcpc new space-shooter
+cd space-shooter
+
+# Create a simple BASIC loader
+cat > bas/loader.bas << 'EOF'
+10 MODE 0
+20 MEMORY 23599
+30 PRINT "Loading Space Shooter..."
+40 LOAD"8BP0.BIN"
+50 CALL &6B78
+EOF
+
+# Configure for 8BP scrolling game (BUILD_LEVEL 2)
+# Edit devcpc.conf and set:
+#   BUILD_LEVEL=2
+#   ASM_PATH="asm/make_all_game.asm"
+#   BASIC_PATH="bas"
+
+# Add your assembly code to ASM/
+# (Copy your make_all_game.asm and other .asm files)
+
+# Build everything
+devcpc build
+
+# Check the output
+ls -la dist/
+```
+
+Expected output:
+
+```
+═══════════════════════════════════════
+  Compilar Proyecto: space-shooter
+═══════════════════════════════════════
+
+ℹ Build Level: 2 (Juegos con scroll)
+ℹ Memoria BASIC: MEMORY 24799
+
+✓ Compilación exitosa
+✓ DSK creado
+✓ 1 archivo(s) BASIC añadidos
+
+Contenido del DSK:
+0: 8BP2    .BIN  [ st: 0 extend: 0 data pages: 118 ]
+1: LOADER  .BAS  [ st: 0 extend: 0 data pages: 3 ]
+
+✓ Proyecto compilado exitosamente
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Build fails with 'ASM_PATH not found'">
+    Make sure `ASM_PATH` in `devcpc.conf` points to an existing file:
+    
+    ```bash
+    ASM_PATH="asm/make_all_mygame.asm"  # Must exist
+    ```
+    
+    Check the file exists:
+    ```bash
+    ls -la ASM/make_all_mygame.asm
+    ```
+  </Accordion>
+
+  <Accordion title="BASIC files not appearing in DSK">
+    Verify `BASIC_PATH` is configured:
+    
+    ```bash
+    BASIC_PATH="bas"
+    ```
+    
+    And your `.bas` files are in that directory:
+    ```bash
+    ls -la bas/*.bas
+    ```
+  </Accordion>
+
+  <Accordion title="Graphics limit exceeded">
+    Error: `_END_GRAPH exceeds 42040`
+    
+    Your graphics are too large. Either:
+    - Reduce sprite size/count
+    - Use a different MODE
+    - Optimize your graphics
+  </Accordion>
+
+  <Accordion title="Emulator won't start">
+    Check:
+    1. RVM_PATH is correct
+    2. RetroVirtualMachine v2.0 BETA-1 R7 is installed
+    3. File has execution permissions
+    
+    Test manually:
+    ```bash
+    "$RVM_PATH" --help
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Commands Reference" icon="terminal" href="/cli/build">
+    Learn all available DevCPC commands
+  </Card>
+  <Card title="Configuration" icon="gear" href="/concepts/configuration">
+    Deep dive into devcpc.conf options
+  </Card>
+  <Card title="Graphics Conversion" icon="image" href="/guides/graphics-conversion">
+    Convert PNG images to CPC formats
+  </Card>
+  <Card title="8BP Library" icon="book" href="https://github.com/jjaranda13/8BP">
+    Learn about the 8BP game library
+  </Card>
+</CardGroup>

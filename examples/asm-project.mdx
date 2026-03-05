@@ -1,0 +1,483 @@
+---
+title: "ASM Project"
+description: "Pure Z80 assembly project without 8BP library"
+---
+
+This example demonstrates a pure Z80 assembly project without using the 8BP library. Ideal for developers who want full control over their code or are creating system utilities.
+
+## Project Structure
+
+```
+asm/
+├── devcpc.conf              # Project configuration
+├── src/
+│   ├── main.asm             # Main assembly file
+│   └── sprites.asm          # Auto-generated sprites
+├── assets/
+│   ├── sprites/             # Sprite PNG files
+│   │   ├── devcpc.png
+│   │   └── Destroyer.png
+│   └── screen/              # Loading screens
+│       └── devcpc.png
+├── obj/                     # Generated: binaries
+└── dist/                    # Generated: DSK, CDT
+```
+
+## Configuration (devcpc.conf)
+
+```bash
+# Project name
+PROJECT_NAME="asm"
+
+# BUILD_LEVEL not defined - pure ASM mode
+
+# ASM compilation settings
+LOADADDR=0x1200              # Load address in hex
+SOURCE="main"                # Source file (main.asm)
+TARGET="hellowor"            # Output binary name (max 8 chars)
+
+# Source paths
+ASM_PATH="src"               # Directory containing main.asm
+BASIC_PATH="src"             # Optional BASIC files
+
+# Graphics conversion
+MODE=1                       # Mode 1: 320x200, 4 colors
+SPRITES_PATH="assets/sprites"
+SPRITES_OUT_FILE="src/sprites.asm"
+LOADER_SCREEN="assets/screen"
+
+# Output
+OBJ_DIR="obj"
+DIST_DIR="dist"
+DSK="${PROJECT_NAME}.dsk"
+CDT="${PROJECT_NAME}.cdt"
+CDT_FILES="hellowor.bin"
+
+# Emulator
+RUN_MODE="dsk"
+RVM_PATH="/Applications/Retro Virtual Machine 2.app/Contents/MacOS/Retro Virtual Machine 2"
+CPC_MODEL=6128
+RUN_FILE="hellowor.bin"
+```
+
+## Main Assembly File (main.asm)
+
+```asm
+; Hello World + Logo example
+; Pure Z80 assembly for Amstrad CPC
+
+; Firmware routines
+print_char equ &BB5A         ; Char printing
+scr_set_mode equ &BC0E       ; Set screen mode
+scr_set_ink equ &BC32        ; Set ink color
+wait_key equ &BB18           ; Wait for key press
+wait_vsync equ &BD19         ; Wait for vertical sync
+
+main:
+    ; Set mode 1 (320x200, 4 colors)
+    ld a, 1
+    call scr_set_mode
+    
+    ; Configure palette for devcpc sprite
+    ld a, 0
+    ld b, 0
+    ld c, 0                  ; INK 0 = Black
+    call scr_set_ink
+    
+    ld a, 1
+    ld b, 1
+    ld c, 24                 ; INK 1 = Yellow
+    call scr_set_ink
+    
+    ld a, 2
+    ld b, 2
+    ld c, 6                  ; INK 2 = Red
+    call scr_set_ink
+    
+    ; Wait for VSYNC to avoid flicker
+    call wait_vsync
+    
+    ; Draw sprite centered
+    ; Mode 1 screen: 320 pixels = 80 bytes wide, 200 pixels tall
+    ; Sprite: 120 pixels = 30 bytes wide, 40 pixels tall
+    ; Center X: (320 - 120) / 2 = 100 pixels = 25 bytes
+    ; Center Y: (200 - 40) / 2 = 80 pixels
+    ld hl, devcpc
+    ld c, (hl)               ; C = width in bytes
+    inc hl
+    ld b, (hl)               ; B = height in pixels
+    inc hl                   ; HL = sprite data pointer
+    push hl
+    
+    ; Calculate centered video address
+    push bc
+    ld a, 200
+    sub b
+    srl a
+    ld d, a                  ; D = centered Y
+    
+    ld a, 80
+    sub c
+    srl a
+    ld e, a                  ; E = centered X in bytes
+    
+    ; Calculate video memory address
+    ; Base: &C000
+    ; Add X offset
+    ld hl, &C000
+    ld a, l
+    add a, e
+    ld l, a
+    jr nc, ps_x_ok
+    inc h
+ps_x_ok:
+    ; Add &0800 * (Y % 8)
+    ld a, d
+    and 7
+    ld b, a
+ps_y_mod_loop:
+    ld a, b
+    or a
+    jr z, ps_y_mod_done
+    ld de, &0800
+    add hl, de
+    dec b
+    jr ps_y_mod_loop
+ps_y_mod_done:
+    ; Add &0050 * (Y / 8)
+    ld a, d
+    srl a
+    srl a
+    srl a
+    ld c, a
+ps_y_div_loop:
+    ld a, c
+    or a
+    jr z, ps_y_div_done
+    ld de, &0050
+    add hl, de
+    dec c
+    jr ps_y_div_loop
+ps_y_div_done:
+    pop bc
+    pop de                   ; DE = sprite data pointer
+    call putsprite
+    
+    ; Position cursor and show message
+    ld h, 15                 ; Row
+    ld l, 10                 ; Column
+    ld a, 1
+    call &BB75               ; TXT SET CURSOR
+    
+    ; Print message
+    ld hl, message
+    call print_string
+    
+    ; Wait for key
+    call wait_key
+    
+loop:
+    jp loop
+
+message: db "SDK from Amstrad CPC",&FF
+
+; CPCRSLIB-inspired sprite routine
+; Inputs:
+;   HL = video RAM address
+;   DE = sprite data pointer
+;   B  = height in bytes
+;   C  = width in bytes
+putsprite:
+    ld a, c
+    ld (ps_width+1), a       ; Self-modifying code
+    ld a, c
+    neg
+    ld (ps_nextline+1), a
+    
+    ld a, b
+    ld iyh, a                ; Use IY as height counter
+    ld b, 7                  ; Lines within block
+    
+ps_line_loop:
+ps_width:
+    ld c, 0                  ; Width (modified above)
+ps_byte_loop:
+    ld a, (de)               ; Read sprite byte
+    ld (hl), a               ; Write to video RAM
+    inc de
+    inc hl
+    dec c
+    jr nz, ps_byte_loop
+    
+    ; Next line
+    dec iyh
+    ret z
+    
+ps_nextline:
+    ld c, 0                  ; Line skip (modified above)
+    add hl, bc
+    jr nc, ps_line_loop
+    
+    ; Crossed 8-line block boundary
+    ld bc, &C050
+    add hl, bc
+    ld b, 7
+    jr ps_line_loop
+    
+print_string:
+    ld a, (hl)
+    cp &FF
+    ret z
+    inc hl
+    call print_char
+    jr print_string
+
+; Include sprite data
+READ "sprites.asm"
+```
+
+## Sprites File (sprites.asm)
+
+Auto-generated from PNG files:
+
+```asm
+; MODE 1
+
+devcpc
+;------ BEGIN IMAGE --------
+  db 30 ; width in bytes
+  db 40 ; height in pixels
+  db 0, 0, 0, 0, 0, 0, 0, 0
+  db 85, 85, 85, 85, 85, 85, 85, 85
+  ; ... sprite data ...
+;------ END IMAGE --------
+  ; Palette detected:
+  ; INK 0,0
+  ; INK 1,24
+  ; INK 2,6
+
+Destroyer
+;------ BEGIN IMAGE --------
+  db 20 ; width in bytes
+  db 30 ; height in pixels
+  ; ... sprite data ...
+;------ END IMAGE --------
+  ; INK 0,0
+  ; INK 1,1
+```
+
+## Build and Run
+
+### Validate Configuration
+
+```bash
+devcpc validate
+```
+
+Output:
+```
+═══════════════════════════════════════
+  Validar Proyecto: asm
+═══════════════════════════════════════
+
+→ Validando configuración...
+✓ PROJECT_NAME: asm
+✓ LOADADDR: 0x1200
+✓ SOURCE: main
+✓ TARGET: hellowor
+
+→ Validando rutas...
+✓ ASM_PATH: src
+✓   main.asm encontrado
+
+→ Validando herramientas...
+✓ Python 3 instalado
+✓ ABASM disponible
+
+✓ Proyecto válido - Sin errores
+```
+
+### Build Project
+
+```bash
+devcpc build
+```
+
+Output:
+```
+═══════════════════════════════════════
+  Compilar Proyecto: asm
+═══════════════════════════════════════
+
+ℹ Modo ASM puro (sin 8BP)
+ℹ Load Address: 0x1200
+ℹ Source: main.asm
+ℹ Target: hellowor.bin
+
+→ Convirtiendo sprites PNG a ASM...
+ℹ Modo: 1 (320x200, 4 colores)
+✓ Sprites convertidos: 2
+
+→ Convirtiendo pantallas de carga...
+✓ devcpc.scn generado
+
+→ Compilando main.asm con ABASM...
+✓ Compilación exitosa
+ℹ Binary: obj/hellowor.bin (2048 bytes)
+
+→ Creando DSK...
+✓ DSK creado: dist/asm.dsk
+
+Contenido:
+0: HELLOWOR.BIN  [ st: 0 extend: 0 data pages: 16 ]
+1: DEVCPC  .SCN  [ st: 0 extend: 0 data pages: 128 ]
+
+→ Creando CDT...
+✓ CDT creado: dist/asm.cdt
+
+✓ Proyecto compilado exitosamente
+```
+
+### Run in Emulator
+
+```bash
+devcpc run
+```
+
+The emulator will:
+1. Load the DSK image
+2. Auto-execute `RUN"HELLOWOR.BIN"`
+3. Display the sprite and message
+
+## Key Differences from 8BP Projects
+
+| Feature | 8BP Project | ASM Project |
+|---------|-------------|-------------|
+| **BUILD_LEVEL** | Required (0-4) | Not used |
+| **LOADADDR** | Set by BUILD_LEVEL | Manual (e.g., 0x1200) |
+| **SOURCE** | N/A | Required (filename) |
+| **TARGET** | N/A | Required (output name) |
+| **ASM_PATH** | Points to file | Points to directory |
+| **Library** | 8BP included | Pure Z80 only |
+| **Commands** | \|SETUPSP, \|PRINTSP, etc. | Firmware calls only |
+| **Binary Name** | 8BP0.bin, 8BP1.bin, etc. | Custom (TARGET.bin) |
+| **Memory Layout** | Predefined by 8BP | Full control |
+
+## Memory Map
+
+```
+&0000 - &3FFF  ROM (16KB)
+&1200 - &????  Your program (LOADADDR)
+&4000 - &7FFF  Screen memory (16KB in Mode 1)
+&8000 - &BFFF  Free RAM
+&C000 - &FFFF  Screen memory + system
+```
+
+## Firmware Routines
+
+Commonly used firmware calls:
+
+```asm
+; Text output
+print_char      equ &BB5A   ; Print character in A
+print_string    equ &BB5D   ; Print string at HL
+
+; Screen control
+scr_set_mode    equ &BC0E   ; Set mode (0, 1, 2 in A)
+scr_set_ink     equ &BC32   ; Set INK (A=pen, B=pen, C=color)
+scr_set_border  equ &BC38   ; Set border (B=pen, C=color)
+clear_screen    equ &BC14   ; Clear screen
+
+; Cursor control
+txt_set_cursor  equ &BB75   ; Set cursor (H=row, L=col)
+txt_get_cursor  equ &BB78   ; Get cursor position
+
+; Keyboard
+wait_key        equ &BB18   ; Wait for key press
+get_key         equ &BB09   ; Get key state
+
+; Timing
+wait_vsync      equ &BD19   ; Wait for vertical sync
+```
+
+## Using ABASM Directives
+
+### Include Files
+
+```asm
+READ "sprites.asm"          ; Include file
+INCBIN "data.bin"           ; Include binary data
+```
+
+### Labels and Constants
+
+```asm
+START_ADDR equ &1200
+SCREEN_BASE equ &C000
+
+main:
+    ld hl, SCREEN_BASE
+    ; ...
+```
+
+### Conditional Assembly
+
+```asm
+let DEBUG = 1
+
+if DEBUG = 1
+    ; Debug code
+    call print_debug_info
+endif
+```
+
+### Save Directive
+
+```asm
+; Save binary with AMSDOS header
+SAVE "program.bin", 0x1200, 2048
+
+; LOADADDR, SIZE in bytes
+```
+
+## Advanced Example: Multi-File ASM Project
+
+See [Multi-File Projects](/recipes/multi-file-projects) for organizing larger assembly projects with multiple source files.
+
+## Troubleshooting
+
+### "SOURCE not found"
+
+Make sure `main.asm` exists in the `src/` directory specified by `ASM_PATH`.
+
+### "LOADADDR not defined"
+
+For ASM projects (without BUILD_LEVEL), you must define:
+```bash
+LOADADDR=0x1200
+SOURCE="main"
+TARGET="program"
+```
+
+### Binary Too Large
+
+If your binary exceeds available memory:
+1. Optimize code
+2. Remove unused data
+3. Use compression
+4. Choose a lower LOADADDR if possible
+
+## Next Steps
+
+1. **Add More Sprites**: Place PNG files in `assets/sprites/`
+2. **Create Loading Screen**: Add PNG to `assets/screen/`
+3. **Expand Code**: Add game logic to `main.asm`
+4. **Optimize**: Use Z80 optimization techniques
+5. **Test**: Run on real hardware with M4 board
+
+## Related
+
+- [8BP Game Example](/examples/8bp-game) - Using the 8BP library
+- [BASIC Program Example](/examples/basic-program) - BASIC-only project
+- [Sprite Animation](/recipes/sprite-animation) - PNG to ASM conversion
+- [Multi-File Projects](/recipes/multi-file-projects) - Large ASM projects

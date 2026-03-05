@@ -1,0 +1,398 @@
+---
+title: Compiling Code
+description: Complete guide to compiling ASM, BASIC, and C code with DevCPC
+---
+
+## Overview
+
+The `devcpc build` command compiles your complete project, including assembly code, BASIC programs, graphics conversion, and image generation. It follows a 14-step process to ensure everything is built correctly.
+
+## Build Command
+
+```bash
+devcpc build
+```
+
+This single command handles all compilation tasks automatically based on your `devcpc.conf` configuration.
+
+## Build Process (14 Steps)
+
+DevCPC executes the following steps during compilation:
+
+### Step 1: Convert Sprites (PNG → ASM)
+
+If `SPRITES_PATH` is configured:
+- Searches for PNG files in the sprites directory
+- Converts them to ASM format using `png2asm.py`
+- Generates sprite data compatible with CPC palette
+- Outputs to configured ASM file
+
+```bash
+✓ Sprites convertidos exitosamente
+OK: ASM/sprites.asm
+PNGs encontrados: 3 | Convertidos OK: 3 | Errores: 0
+```
+
+### Step 2: Convert Screens (PNG → SCN)
+
+If `LOADER_SCREEN` is configured:
+- Converts PNG loading screens to SCN format
+- Generates 16KB screen files for direct CPC memory
+- Creates `.scn.info` files with palette data
+- Stores in `obj/` directory
+
+```bash
+✓ 2 pantalla(s) convertida(s)
+✓ title.scn generado (16384 bytes)
+```
+
+### Step 3: Compile ASM with ABASM
+
+If `ASM_PATH` is configured:
+- Modifies `ASSEMBLING_OPTION` based on `BUILD_LEVEL`
+- Compiles assembly code with ABASM
+- Generates binary, listing, and map files
+- Outputs `8BP{LEVEL}.bin` or `{TARGET}.bin`
+
+```bash
+✓ Compilación exitosa
+Archivo generado: obj/8BP0.bin (19120 bytes)
+```
+
+### Step 4: Verify Graphics Limits
+
+For 8BP projects:
+- Checks `_END_GRAPH` symbol in map file
+- Ensures graphics don't exceed address 42040 (`0xA428`)
+- Prevents memory corruption
+
+```bash
+✓ Límite de gráficos respetado (< 42040)
+```
+
+### Step 5: Create DSK Image
+
+Creates an empty DSK file:
+- Generates blank 178KB disk image
+- Places in `dist/` directory
+- Ready to receive files
+
+```bash
+✓ DSK creado: dist/my-game.dsk
+```
+
+### Step 6: Add ASM Binary to DSK
+
+Adds compiled binary to disk:
+- For 8BP: `8BP0.bin`, `8BP1.bin`, etc.
+- For pure ASM: `{TARGET}.bin`
+- Sets load and execute addresses
+
+```bash
+✓ 8BP0.bin añadido al DSK
+```
+
+### Step 7: Add Screens to DSK
+
+If loading screens exist:
+- Adds all `.scn` files from `obj/`
+- Load address: `0xC000` (video memory)
+- Execute address: `0xC000`
+
+```bash
+✓ 2 pantalla(s) añadida(s) al DSK
+```
+
+### Step 8: Compile C with SDCC
+
+If `C_PATH` is configured:
+- Compiles C source with SDCC for Z80
+- Converts Intel HEX to binary
+- Adds C binary to DSK
+- Code location: `C_CODE_LOC` (default: 20000)
+
+```bash
+✓ Código C compilado exitosamente
+✓ main.bin añadido al DSK
+```
+
+### Step 9: Verify C Memory Limits
+
+Checks C code size:
+- Ensures code < 23999 to avoid corrupting 8BP
+- Validates memory layout
+
+```bash
+✓ Límite de memoria C respetado (< 23999)
+```
+
+### Step 10: Add BASIC Files to DSK
+
+If `BASIC_PATH` is configured:
+- Finds all `.bas` files in directory
+- Adds them as ASCII files to DSK
+- Preserves BASIC tokenization
+
+```bash
+✓ 1 archivo(s) BASIC añadidos
+```
+
+### Step 11: Add RAW Files to DSK
+
+If `RAW_PATH` is configured:
+- Adds binary files without AMSDOS header
+- Useful for data files, music, etc.
+
+```bash
+✓ Archivos RAW añadidos
+```
+
+### Step 12: Show DSK Catalog
+
+Displays disk contents:
+- Lists all files on DSK
+- Shows file types and sizes
+- Displays data pages used
+
+```bash
+Contenido del DSK:
+0: 8BP0    .BIN  [ st: 0 extend: 0 data pages: 128 ]
+1: LOADER  .BAS  [ st: 0 extend: 0 data pages: 3 ]
+2: TITLE   .SCN  [ st: 0 extend: 0 data pages: 128 ]
+```
+
+### Step 13: Create CDT (if configured)
+
+If `CDT` and `CDT_FILES` are set:
+- Creates tape image
+- Adds files in specified order
+- Generates sequential tape structure
+
+```bash
+✓ 3 archivo(s) añadido(s) al CDT
+```
+
+### Step 14: Show CDT Catalog
+
+Displays tape contents:
+- Lists all blocks on CDT
+- Shows file order and types
+
+## ASM Compilation Details
+
+### 8BP Projects
+
+8BP projects use `BUILD_LEVEL` to control which features are included:
+
+```bash
+# devcpc.conf
+PROJECT_NAME="game"
+BUILD_LEVEL=0
+ASM_PATH="asm/make_all_mygame.asm"
+```
+
+**Build Levels:**
+
+| Level | Features | MEMORY | Size |
+|-------|----------|--------|------|
+| 0 | All features | 23599 | 19120 bytes |
+| 1 | Labyrinths | 24999 | 17620 bytes |
+| 2 | Scrolling | 24799 | 17820 bytes |
+| 3 | Pseudo-3D | 23999 | 18620 bytes |
+| 4 | Basic | 25299 | 17320 bytes |
+
+DevCPC automatically:
+- Sets `ASSEMBLING_OPTION` in your ASM file
+- Compiles with ABASM
+- Generates `8BP{LEVEL}.bin`
+
+### Pure ASM Projects
+
+For projects without 8BP:
+
+```bash
+# devcpc.conf
+PROJECT_NAME="demo"
+SOURCE="main"        # Source filename (no extension)
+TARGET="program"     # Output binary name
+LOADADDR="0x4000"    # Load address
+ASM_PATH="asm"       # ASM directory
+```
+
+DevCPC will:
+- Compile `asm/{SOURCE}.asm`
+- Generate `{TARGET}.bin`
+- Set load/execute address to `LOADADDR`
+
+## BASIC File Handling
+
+BASIC files are added automatically:
+
+```bash
+BASIC_PATH="bas"
+```
+
+All `.bas` files in this directory are:
+- Added to the DSK as ASCII files
+- Preserved with proper tokenization
+- Available to load from BASIC
+
+**Usage from CPC:**
+```basic
+LOAD"LOADER.BAS"
+RUN
+```
+
+## C Compilation with SDCC
+
+### Requirements
+
+```bash
+# Install SDCC
+brew install sdcc        # macOS
+sudo apt install sdcc    # Linux
+```
+
+### Configuration
+
+```bash
+C_PATH="C"
+C_SOURCE="main.c"
+C_CODE_LOC=20000  # Must be < 23999
+```
+
+### Compilation Process
+
+1. Compiles with SDCC for Z80:
+   ```bash
+   sdcc -mz80 --code-loc {C_CODE_LOC} --no-std-crt0 main.c
+   ```
+
+2. Converts Intel HEX to binary:
+   ```bash
+   hex2bin main.ihx
+   ```
+
+3. Adds to DSK with load address
+
+### Memory Layout
+
+**Important:** C code must not exceed address 23999 to avoid corrupting 8BP library.
+
+```
+0x0000 ┌──────────────┐
+       │ CPC System   │
+0x4000 ├──────────────┤
+       │              │
+       │ Your C Code  │  ← C_CODE_LOC
+       │              │
+0x5C30 ├──────────────┤
+       │ 8BP Library  │
+0xA428 ├──────────────┤
+       │ Graphics     │
+0xC000 └──────────────┘
+```
+
+### Using C with 8BP
+
+```basic
+10 REM Load 8BP with graphics
+20 MEMORY 23599
+30 LOAD"8BP0.bin"
+40 CALL &6B78
+50 REM Load C code
+60 LOAD"main.BIN",20000
+70 CALL &56B0  ' Address of _main
+```
+
+## Build Output Example
+
+```bash
+═══════════════════════════════════════
+  Compilar Proyecto: space-invaders
+═══════════════════════════════════════
+
+ℹ Sistema: macOS (arm64)
+ℹ Build Level: 0 (Todas las funcionalidades)
+ℹ Memoria BASIC: MEMORY 23599
+
+→ Convertir Sprites PNG a ASM
+✓ 5 sprite(s) convertido(s)
+
+→ Convertir Pantallas de Carga
+✓ 2 pantalla(s) convertida(s)
+
+→ Compilar Código ASM
+✓ Compilación exitosa
+✓ Límite de gráficos respetado (< 42040)
+
+→ Crear Imagen DSK
+✓ DSK creado: dist/space-invaders.dsk
+
+→ Añadir archivos al DSK
+✓ 8BP0.bin añadido
+✓ 2 pantalla(s) añadida(s)
+✓ 1 archivo(s) BASIC añadidos
+
+Contenido del DSK:
+0: 8BP0    .BIN  [ st: 0 extend: 0 data pages: 128 ]
+1: TITLE   .SCN  [ st: 0 extend: 0 data pages: 128 ]
+2: LOADER  .BAS  [ st: 0 extend: 0 data pages: 3 ]
+
+✓ Proyecto compilado exitosamente
+```
+
+## Cleaning Build Artifacts
+
+Remove generated files:
+
+```bash
+devcpc clean
+```
+
+Deletes:
+- `obj/` directory (intermediates)
+- `dist/` directory (final images)
+- Backup files in `ASM/`
+
+## Troubleshooting
+
+### Compilation Errors
+
+**ABASM errors:**
+- Check syntax in your ASM files
+- Verify `BUILD_LEVEL` is correct
+- Ensure `make_all_*.asm` exists
+
+**Graphics limit exceeded:**
+- Reduce sprite/image sizes
+- Optimize graphics data
+- Use higher `BUILD_LEVEL`
+
+**Python/Pillow errors:**
+```bash
+pip3 install Pillow
+```
+
+**SDCC not found:**
+```bash
+brew install sdcc  # macOS
+```
+
+### Memory Issues
+
+**C code too large:**
+- Use lower `C_CODE_LOC`
+- Optimize code size
+- Adjust `MEMORY` in BASIC
+
+**8BP memory conflicts:**
+- Ensure `C_CODE_LOC < 23599`
+- Check map files for symbol addresses
+
+## See Also
+
+- [Creating Projects](/guides/creating-projects) - Initialize projects
+- [Graphics Conversion](/guides/graphics-conversion) - PNG to ASM
+- [Disk Images](/guides/disk-images) - DSK management
+- [Emulator Integration](/guides/emulator-integration) - Testing with RVM

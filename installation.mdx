@@ -1,0 +1,330 @@
+---
+title: Installation
+description: Install DevCPC CLI on macOS, Linux, or Windows WSL
+---
+
+# Installing DevCPC CLI
+
+DevCPC CLI can be installed automatically using a single command, or manually if you prefer more control over the installation process.
+
+## Automated Installation
+
+The easiest way to install DevCPC is using the automated installer.
+
+### Using curl
+
+```bash
+curl -fsSL https://destroyer.me/devcpc | bash
+```
+
+### Using wget
+
+```bash
+wget -qO- https://destroyer.me/devcpc | bash
+```
+
+### What the Installer Does
+
+The automated installer:
+1. Downloads the latest version of DevCPC
+2. Installs it to `~/.DevCPC`
+3. Automatically configures your shell (bash/zsh)
+4. Adds DevCPC to your PATH
+
+## Post-Installation
+
+After installation, reload your shell configuration:
+
+<CodeGroup>
+
+```bash bash
+source ~/.bashrc
+```
+
+```bash zsh
+source ~/.zshrc
+```
+
+</CodeGroup>
+
+Or simply open a new terminal window.
+
+### Verify Installation
+
+Check that DevCPC is installed correctly:
+
+```bash
+devcpc version
+```
+
+You should see output similar to:
+
+```
+DevCPC CLI v1.1.0
+```
+
+## Manual Installation
+
+If you prefer to install manually, follow these steps:
+
+<Steps>
+  <Step title="Download the latest release">
+    Download the latest version from [GitHub Releases](https://github.com/destroyer-dcf/CPCDevKit/releases)
+  </Step>
+  
+  <Step title="Extract the archive">
+    ```bash
+    tar -xzf DevCPC-X.Y.Z.tar.gz
+    ```
+  </Step>
+  
+  <Step title="Run the setup script">
+    ```bash
+    cd CPCDevKit
+    ./setup.sh
+    ```
+  </Step>
+  
+  <Step title="Reload your shell">
+    ```bash
+    source ~/.bashrc  # or ~/.zshrc
+    ```
+  </Step>
+</Steps>
+
+## Platform-Specific Notes
+
+<AccordionGroup>
+  <Accordion title="macOS" icon="apple">
+    DevCPC works on both Apple Silicon (ARM64) and Intel (x86_64) Macs.
+    
+    **Requirements:**
+    - macOS 10.15 or later
+    - Xcode Command Line Tools (for development)
+    - Python 3.x (usually pre-installed)
+    
+    **Install Command Line Tools:**
+    ```bash
+    xcode-select --install
+    ```
+  </Accordion>
+
+  <Accordion title="Linux" icon="linux">
+    DevCPC supports both ARM64 and x86_64 architectures.
+    
+    **Requirements:**
+    - Python 3.x
+    - bash or zsh shell
+    
+    **Install Python (if needed):**
+    ```bash
+    # Debian/Ubuntu
+    sudo apt-get install python3 python3-pip
+    
+    # Fedora/RHEL
+    sudo dnf install python3 python3-pip
+    
+    # Arch Linux
+    sudo pacman -S python python-pip
+    ```
+  </Accordion>
+
+  <Accordion title="Windows WSL" icon="windows">
+    DevCPC runs on Windows Subsystem for Linux (WSL) or Git Bash.
+    
+    **Using WSL (Recommended):**
+    1. [Install WSL](https://docs.microsoft.com/en-us/windows/wsl/install)
+    2. Install a Linux distribution (Ubuntu recommended)
+    3. Follow the Linux installation steps above
+    
+    **Using Git Bash:**
+    1. Install [Git for Windows](https://git-scm.com/download/win)
+    2. Open Git Bash
+    3. Run the automated installer
+    
+    <Warning>
+      Git Bash support is limited. WSL is the recommended approach for Windows users.
+    </Warning>
+  </Accordion>
+</AccordionGroup>
+
+## Installing Optional Dependencies
+
+### SDCC (C Compiler)
+
+Only required if you want to compile C code for your CPC projects.
+
+<CodeGroup>
+
+```bash macOS
+brew install sdcc
+```
+
+```bash Ubuntu/Debian
+sudo apt-get install sdcc
+```
+
+```bash Fedora
+sudo dnf install sdcc
+```
+
+</CodeGroup>
+
+Verify installation:
+
+```bash
+sdcc --version
+```
+
+### RetroVirtualMachine
+
+Only required if you want to use `devcpc run` to test your projects in an emulator.
+
+<Warning>
+  **Important:** Only version **v2.0 BETA-1 R7 (10/07/2019)** is supported. This is the only version with development options enabled.
+</Warning>
+
+Download from: [RetroVirtualMachine Website](https://www.retrovirtualmachine.org/)
+
+After installation, configure the path in your `devcpc.conf`:
+
+<CodeGroup>
+
+```bash macOS
+RVM_PATH="/Applications/Retro Virtual Machine 2.app/Contents/MacOS/Retro Virtual Machine 2"
+```
+
+```bash Linux
+RVM_PATH="/usr/local/bin/RetroVirtualMachine"
+```
+
+```bash Windows WSL
+RVM_PATH="/mnt/c/Program Files/RetroVirtualMachine/RetroVirtualMachine.exe"
+```
+
+</CodeGroup>
+
+### Pillow (Python Library)
+
+Only required if you want to convert PNG images to ASM sprites or SCN screens.
+
+```bash
+pip3 install Pillow
+```
+
+Verify installation:
+
+```bash
+python3 -c "import PIL; print('Pillow OK')"
+```
+
+Expected output:
+```
+Pillow OK
+```
+
+## Updating DevCPC
+
+### Using the Update Command
+
+The easiest way to update:
+
+```bash
+devcpc update
+```
+
+This will:
+1. Check for the latest version
+2. Download and install updates automatically
+3. Preserve your projects and configuration
+
+### Manual Update
+
+You can also reinstall using the automated installer:
+
+```bash
+rm -rf ~/.DevCPC
+curl -fsSL https://destroyer.me/devcpc | bash
+```
+
+<Note>
+  Your projects are stored separately, so reinstalling DevCPC won't affect them.
+</Note>
+
+## Uninstalling DevCPC
+
+To remove DevCPC from your system:
+
+```bash
+rm -rf ~/.DevCPC
+```
+
+Then remove the PATH configuration from your `~/.bashrc` or `~/.zshrc`:
+
+```bash
+# Remove these lines:
+export DEVCPC_PATH="$HOME/.DevCPC"
+export PATH="$DEVCPC_PATH/bin:$PATH"
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Command not found: devcpc">
+    The PATH wasn't configured correctly. Try:
+    
+    ```bash
+    source ~/.bashrc  # or ~/.zshrc
+    ```
+    
+    If that doesn't work, verify the PATH is in your shell config:
+    
+    ```bash
+    cat ~/.bashrc | grep DEVCPC
+    ```
+    
+    You should see:
+    ```bash
+    export DEVCPC_PATH="$HOME/.DevCPC"
+    export PATH="$DEVCPC_PATH/bin:$PATH"
+    ```
+  </Accordion>
+
+  <Accordion title="Permission denied errors">
+    Make sure the DevCPC scripts are executable:
+    
+    ```bash
+    chmod +x ~/.DevCPC/bin/*
+    ```
+  </Accordion>
+
+  <Accordion title="Python not found">
+    Install Python 3:
+    
+    ```bash
+    # macOS
+    brew install python3
+    
+    # Ubuntu/Debian
+    sudo apt-get install python3
+    
+    # Fedora
+    sudo dnf install python3
+    ```
+  </Accordion>
+
+  <Accordion title="Updates not working">
+    If `devcpc update` fails, manually reinstall:
+    
+    ```bash
+    rm -rf ~/.DevCPC
+    curl -fsSL https://destroyer.me/devcpc | bash
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<Card title="Quick Start" icon="rocket" href="/quickstart">
+  Now that DevCPC is installed, create your first CPC project!
+</Card>

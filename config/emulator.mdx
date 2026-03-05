@@ -1,0 +1,359 @@
+---
+title: 'Emulator Settings'
+description: 'Configure RetroVirtualMachine for testing'
+icon: 'desktop'
+---
+
+## Overview
+
+Emulator settings allow you to test your project directly from DevCPC using the `devcpc run` command with RetroVirtualMachine.
+
+<Info>
+Only **RetroVirtualMachine v2.0 BETA-1 R7 (10/07/2019)** is supported. This is the only version with development features enabled.
+
+Download from: [RetroVirtualMachine](https://www.retrovirtualmachine.org/blog/future/)
+</Info>
+
+## Basic Configuration
+
+### RVM_PATH
+
+Path to the RetroVirtualMachine executable.
+
+```bash devcpc.conf
+# macOS
+RVM_PATH="/Applications/Retro Virtual Machine 2.app/Contents/MacOS/Retro Virtual Machine 2"
+
+# Linux
+RVM_PATH="/usr/local/bin/RetroVirtualMachine"
+
+# Windows WSL
+RVM_PATH="/mnt/c/Program Files/RetroVirtualMachine/RetroVirtualMachine.exe"
+```
+
+- **Type**: Absolute path to executable
+- **Required for**: `devcpc run` command
+- **Platform-specific**: Use the appropriate path for your OS
+
+**Finding RVM on macOS:**
+```bash
+# Right-click RetroVirtualMachine.app → Show Package Contents
+# Navigate to Contents/MacOS/
+# Full path is typically:
+/Applications/Retro\ Virtual\ Machine\ 2.app/Contents/MacOS/Retro\ Virtual\ Machine\ 2
+```
+
+**Finding RVM on Linux:**
+```bash
+which RetroVirtualMachine
+# or check common locations:
+/usr/local/bin/RetroVirtualMachine
+/opt/RetroVirtualMachine/RetroVirtualMachine
+```
+
+**Finding RVM on Windows (WSL):**
+```bash
+# Windows path: C:\Program Files\RetroVirtualMachine\RetroVirtualMachine.exe
+# WSL path:
+/mnt/c/Program\ Files/RetroVirtualMachine/RetroVirtualMachine.exe
+```
+
+## CPC Model Selection
+
+### CPC_MODEL
+
+Amstrad CPC model to emulate.
+
+```bash devcpc.conf
+CPC_MODEL=464
+```
+
+- **Type**: Integer
+- **Options**: `464`, `664`, `6128`
+- **Default**: 464
+
+| Model | RAM | Disk Drive | Tape | Notes |
+|-------|-----|------------|------|-------|
+| **464** | 64KB | ❌ No | ✅ Yes | Original model, tape only |
+| **664** | 64KB | ✅ Yes | ✅ Yes | With built-in disk drive |
+| **6128** | 128KB | ✅ Yes | ✅ Yes | Enhanced model, 128KB RAM |
+
+<Tip>
+Use CPC_MODEL=464 for maximum compatibility. Most games run on all models.
+</Tip>
+
+## Execution Modes
+
+### RUN_MODE
+
+Controls whether to run from disk (DSK) or tape (CDT).
+
+```bash devcpc.conf
+RUN_MODE="auto"
+```
+
+- **Type**: String
+- **Options**: `"auto"`, `"dsk"`, `"cdt"`
+- **Default**: `"auto"`
+
+| Mode | Description | Behavior |
+|------|-------------|----------|
+| `auto` | Auto-detect | Uses CDT if `CDT` and `CDT_FILES` are configured, otherwise DSK |
+| `dsk` | Force disk | Always runs from DSK image |
+| `cdt` | Force tape | Always runs from CDT image |
+
+**Command-line override:**
+```bash
+# Override RUN_MODE from command line
+devcpc run --dsk    # Force disk mode
+devcpc run --cdt    # Force tape mode
+devcpc run          # Use RUN_MODE setting
+```
+
+### RUN_FILE
+
+File to auto-execute when running in DSK mode.
+
+```bash devcpc.conf
+RUN_FILE="8BP0.BIN"
+```
+
+- **Type**: Filename (without path)
+- **Optional**: Leave empty for manual loading
+- **Applies to**: DSK mode only (ignored in CDT mode)
+- **Example values**: `"8BP0.BIN"`, `"LOADER.BAS"`, `"GAME.BIN"`
+
+## Execution Behavior
+
+### DSK Mode
+
+When running from disk:
+
+1. Closes any existing RVM sessions
+2. Launches RVM with the specified CPC model
+3. Mounts the DSK image
+4. If `RUN_FILE` is set:
+   ```
+   RUN"RUN_FILE"
+   ```
+5. If `RUN_FILE` is empty: drops to BASIC prompt
+
+**Example session:**
+```
+Amstrad 64K Microcomputer (v3)
+READY
+
+RUN"8BP0.BIN"
+[Game starts]
+```
+
+### CDT Mode
+
+When running from tape:
+
+1. Closes any existing RVM sessions
+2. Launches RVM with the specified CPC model
+3. Mounts the CDT image
+4. On CPC 664/6128: Automatically switches to tape with `|TAPE`
+5. Executes `RUN""` to load the first file
+6. Auto-play is enabled (tape runs automatically)
+
+**Example session (CPC 464):**
+```
+Amstrad 64K Microcomputer (v3)
+READY
+
+RUN""
+[Tape loads automatically]
+```
+
+**Example session (CPC 6128):**
+```
+Amstrad 128K Microcomputer (v3)
+READY
+
+|TAPE
+RUN""
+[Tape loads automatically]
+```
+
+<Info>
+DevCPC automatically handles the `|TAPE` command on disk-based models (664/6128) when running CDT files.
+</Info>
+
+## Complete Examples
+
+### Example 1: DSK with Auto-Execution
+
+```bash devcpc.conf
+# Emulator configuration
+RVM_PATH="/Applications/Retro Virtual Machine 2.app/Contents/MacOS/Retro Virtual Machine 2"
+CPC_MODEL=464
+RUN_MODE="dsk"
+RUN_FILE="8BP0.BIN"
+```
+
+**Usage:**
+```bash
+devcpc build && devcpc run
+# Automatically loads and runs 8BP0.BIN
+```
+
+### Example 2: CDT with Tape Loading
+
+```bash devcpc.conf
+# Emulator configuration
+RVM_PATH="/Applications/Retro Virtual Machine 2.app/Contents/MacOS/Retro Virtual Machine 2"
+CPC_MODEL=464
+RUN_MODE="cdt"
+
+# CDT configuration
+CDT="${PROJECT_NAME}.cdt"
+CDT_FILES="loader.bas 8BP0.bin"
+```
+
+**Usage:**
+```bash
+devcpc build && devcpc run
+# Mounts tape and auto-loads with RUN""
+```
+
+### Example 3: Auto-Detect Mode
+
+```bash devcpc.conf
+# Emulator configuration
+RVM_PATH="/Applications/Retro Virtual Machine 2.app/Contents/MacOS/Retro Virtual Machine 2"
+CPC_MODEL=6128
+RUN_MODE="auto"        # Uses CDT if available, otherwise DSK
+RUN_FILE="LOADER.BAS"  # Used when running DSK
+
+# CDT configuration (optional)
+CDT="${PROJECT_NAME}.cdt"
+CDT_FILES="loader.bas 8BP0.bin"
+```
+
+**Usage:**
+```bash
+devcpc build && devcpc run
+# If CDT is configured: runs from tape
+# Otherwise: runs from disk with LOADER.BAS
+```
+
+### Example 4: Manual Loading
+
+```bash devcpc.conf
+# Emulator configuration
+RVM_PATH="/Applications/Retro Virtual Machine 2.app/Contents/MacOS/Retro Virtual Machine 2"
+CPC_MODEL=664
+RUN_MODE="dsk"
+# RUN_FILE not set - manual control
+```
+
+**Usage:**
+```bash
+devcpc run
+# Drops to BASIC prompt, manual loading:
+READY
+CAT
+LOAD"LOADER.BAS"
+RUN
+```
+
+## Platform-Specific Examples
+
+### macOS (Intel)
+
+```bash devcpc.conf
+RVM_PATH="/Applications/Retro Virtual Machine 2.app/Contents/MacOS/Retro Virtual Machine 2"
+CPC_MODEL=464
+RUN_FILE="8BP0.BIN"
+```
+
+### macOS (Apple Silicon)
+
+```bash devcpc.conf
+# Same path as Intel
+RVM_PATH="/Applications/Retro Virtual Machine 2.app/Contents/MacOS/Retro Virtual Machine 2"
+CPC_MODEL=464
+RUN_FILE="8BP0.BIN"
+```
+
+### Linux (Ubuntu/Debian)
+
+```bash devcpc.conf
+RVM_PATH="/usr/local/bin/RetroVirtualMachine"
+CPC_MODEL=464
+RUN_FILE="8BP0.BIN"
+```
+
+### Windows WSL (Ubuntu)
+
+```bash devcpc.conf
+RVM_PATH="/mnt/c/Program Files/RetroVirtualMachine/RetroVirtualMachine.exe"
+CPC_MODEL=464
+RUN_FILE="8BP0.BIN"
+```
+
+## Troubleshooting
+
+### RVM Not Found
+
+**Error:**
+```
+✗ RetroVirtualMachine no encontrado
+```
+
+**Solution:**
+1. Verify RVM is installed
+2. Check the path is correct:
+   ```bash
+   ls -la "/Applications/Retro Virtual Machine 2.app/Contents/MacOS/Retro Virtual Machine 2"
+   ```
+3. Update `RVM_PATH` in `devcpc.conf`
+
+### Wrong RVM Version
+
+**Issue:** Development features not available
+
+**Solution:** Download **v2.0 BETA-1 R7 (10/07/2019)** specifically. Later versions removed development APIs.
+
+### CDT Not Loading
+
+**Issue:** Tape doesn't auto-load
+
+**Solution:**
+1. Verify `CDT_FILES` is configured
+2. Check files are in correct order
+3. Ensure `RUN_MODE="cdt"` or `RUN_MODE="auto"` with CDT configured
+
+### DSK Not Executing
+
+**Issue:** Game doesn't start automatically
+
+**Solution:**
+1. Set `RUN_FILE` in `devcpc.conf`
+2. Verify the file exists in the DSK:
+   ```bash
+   devcpc build
+   # Check output for DSK contents
+   ```
+
+## Tips
+
+<Tip>
+**Quick testing:** Use `devcpc build && devcpc run` to compile and test in one command.
+</Tip>
+
+<Tip>
+**Multiple models:** Test on different CPC models by changing `CPC_MODEL` and rebuilding.
+</Tip>
+
+<Tip>
+**Force mode:** Use `--dsk` or `--cdt` flags to quickly test both media without editing config.
+</Tip>
+
+## See Also
+
+- [Project Settings](/config/project-settings) - CDT and CPR configuration
+- [Build Command](/commands/build) - Compilation process
+- [Run Command](/commands/run) - Execution details

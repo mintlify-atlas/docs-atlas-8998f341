@@ -1,0 +1,331 @@
+---
+title: 'Paths Configuration'
+description: 'Configure source file and resource paths'
+icon: 'folder-tree'
+---
+
+## Overview
+
+Paths configuration defines where DevCPC looks for source files, resources, and how to process them. All paths are optional - only configure what your project uses.
+
+## Assembly Paths
+
+### ASM_PATH
+
+Path to the main 8BP assembly file.
+
+```bash devcpc.conf
+ASM_PATH="asm/make_all_mygame.asm"
+```
+
+- **Type**: File path (not directory)
+- **Required for**: 8BP projects
+- **Points to**: The main `make_all_*.asm` file that includes all other ASM files
+- **Process**: DevCPC modifies `ASSEMBLING_OPTION` based on `BUILD_LEVEL` and compiles with ABASM
+
+<Warning>
+`ASM_PATH` must point to a **file**, not a directory. It should be the main assembly file that includes all others.
+</Warning>
+
+**Example structure:**
+```
+asm/
+├── make_all_mygame.asm    ← ASM_PATH points here
+├── images_mygame.asm
+├── music_mygame.asm
+└── sprites.asm
+```
+
+## BASIC Paths
+
+### BASIC_PATH
+
+Directory containing BASIC files.
+
+```bash devcpc.conf
+BASIC_PATH="bas"
+```
+
+- **Type**: Directory path
+- **Process**: All `.bas` files in this directory are automatically added to the DSK
+- **Recursive**: No - only scans the specified directory (not subdirectories)
+
+**Example structure:**
+```
+bas/
+├── loader.bas
+├── menu.bas
+└── game.bas
+```
+
+All three `.bas` files will be added to the DSK during `devcpc build`.
+
+## Raw Data Paths
+
+### RAW_PATH
+
+Directory containing raw binary files (without AMSDOS header).
+
+```bash devcpc.conf
+RAW_PATH="raw"
+```
+
+- **Type**: Directory path
+- **Process**: Files are added to the DSK without AMSDOS headers
+- **Use case**: Custom data files, level data, music, etc.
+
+<Info>
+RAW files are added to the DSK "as-is" without any processing or headers.
+</Info>
+
+## C Language Paths
+
+### C_PATH
+
+Directory containing C source files.
+
+```bash devcpc.conf
+C_PATH="C"
+```
+
+- **Type**: Directory path
+- **Required for**: Projects with C code
+- **Process**: Compiled with SDCC during build
+- **Requires**: SDCC must be installed on your system
+
+### C_SOURCE
+
+Main C source file to compile.
+
+```bash devcpc.conf
+C_SOURCE="main.c"
+```
+
+- **Type**: Filename (relative to `C_PATH`)
+- **Required for**: C compilation
+- **Example**: If file is `C/main.c`, set `C_SOURCE="main.c"`
+
+### C_CODE_LOC
+
+Memory address where C code will be loaded.
+
+```bash devcpc.conf
+C_CODE_LOC=20000
+```
+
+- **Type**: Decimal address
+- **Required for**: C compilation
+- **Range**: Must be less than 23999 to avoid destroying 8BP library
+- **Default recommendation**: 20000 (decimal) = 0x4E20 (hex)
+
+<Warning>
+C code location must be < 23999 to avoid overwriting the 8BP library. Adjust your BASIC `MEMORY` statement accordingly.
+</Warning>
+
+**Example BASIC loader for C code:**
+```basic
+10 MEMORY 19999        ' Reserve memory below C code
+20 LOAD"8BP0.BIN"     ' Load 8BP library
+30 CALL &6B78          ' Initialize 8BP
+40 LOAD"MAIN.BIN",20000  ' Load C code at C_CODE_LOC
+50 CALL &56B0          ' Execute C main() - check .map file
+```
+
+## Graphics Paths
+
+### SPRITES_PATH
+
+Directory containing PNG sprite files for conversion.
+
+```bash devcpc.conf
+SPRITES_PATH="assets/sprites"
+```
+
+- **Type**: Directory path
+- **Process**: All PNG files are converted to ASM format
+- **Recursive**: Yes - searches all subdirectories
+- **Requires**: Pillow Python library (`pip3 install Pillow`)
+- **Output**: Controlled by `SPRITES_OUT_FILE`
+
+**Example structure:**
+```
+assets/sprites/
+├── player.png
+├── enemies/
+│   ├── enemy1.png
+│   └── enemy2.png
+└── tiles/
+    ├── tile1.png
+    └── tile2.png
+```
+
+All PNG files are found recursively and converted.
+
+### SPRITES_OUT_FILE
+
+Output file for converted sprites.
+
+```bash devcpc.conf
+SPRITES_OUT_FILE="ASM/sprites.asm"
+```
+
+- **Type**: File path (can include directory)
+- **Default**: `"sprites.asm"` (in project root)
+- **Output**: ASM file with all sprite data and palettes
+- **Usage**: Include this file in your main ASM with `include "sprites.asm"`
+
+### SPRITES_TOLERANCE
+
+RGB color matching tolerance for sprite conversion.
+
+```bash devcpc.conf
+SPRITES_TOLERANCE=8
+```
+
+- **Type**: Integer
+- **Values**:
+  - `0` - Exact match only (colors must exactly match CPC palette)
+  - `8` - Recommended (allows small RGB variations)
+  - `-1` - Automatic (always finds closest color)
+- **Default**: 8
+
+### SPRITES_TRANSPARENT_INK
+
+INK number for transparent pixels (alpha=0 in PNG).
+
+```bash devcpc.conf
+SPRITES_TRANSPARENT_INK=""
+```
+
+- **Type**: Integer (0-26) or empty string
+- **Default**: Empty (no transparency)
+- **Example**: `SPRITES_TRANSPARENT_INK=0` treats transparent pixels as INK 0 (black)
+
+### LOADER_SCREEN
+
+Directory containing PNG loading screen files.
+
+```bash devcpc.conf
+LOADER_SCREEN="assets/screen"
+```
+
+- **Type**: Directory path
+- **Process**: PNG files converted to SCN format (16KB screen dump)
+- **Recursive**: Yes - searches all subdirectories
+- **Address**: SCN files load at &C000 (video memory)
+- **Output**: `.scn` and `.scn.info` files in `${OBJ_DIR}/`
+
+**PNG Requirements:**
+- Mode 0: 160×200 pixels, max 16 colors
+- Mode 1: 320×200 pixels, max 4 colors
+- Mode 2: 640×200 pixels, max 2 colors
+
+**Example structure:**
+```
+assets/screen/
+├── title.png       → obj/title.scn
+├── loading.png     → obj/loading.scn
+└── credits.png     → obj/credits.scn
+```
+
+## Path Resolution
+
+All paths are resolved relative to the project root (where `devcpc.conf` is located).
+
+**Absolute paths:**
+```bash
+ASM_PATH="/home/user/projects/game/asm/make_all_game.asm"
+```
+
+**Relative paths (recommended):**
+```bash
+ASM_PATH="asm/make_all_game.asm"
+BASIC_PATH="bas"
+SPRITES_PATH="assets/sprites"
+```
+
+## Path Validation
+
+Use `devcpc validate` to check if all configured paths exist:
+
+```bash
+devcpc validate
+```
+
+**Output example:**
+```
+→ Validating paths...
+✓ ASM_PATH: asm/make_all_mygame.asm
+✓   make_all_mygame.asm found
+✓ BASIC_PATH: bas (2 file(s) .bas)
+✓ SPRITES_PATH: assets/sprites (5 PNG files)
+✓ LOADER_SCREEN: assets/screen (3 PNG files)
+```
+
+## Example Configurations
+
+### Complete Game Project
+
+```bash devcpc.conf
+# Assembly
+ASM_PATH="asm/make_all_adventure.asm"
+
+# BASIC loaders
+BASIC_PATH="bas"
+
+# Graphics
+SPRITES_PATH="assets/sprites"
+SPRITES_OUT_FILE="ASM/sprites.asm"
+SPRITES_TOLERANCE=8
+
+LOADER_SCREEN="assets/screen"
+MODE=0
+```
+
+### C + 8BP Project
+
+```bash devcpc.conf
+# Assembly (8BP library)
+ASM_PATH="asm/make_all_game.asm"
+
+# C code
+C_PATH="C"
+C_SOURCE="main.c"
+C_CODE_LOC=20000
+
+# BASIC loader
+BASIC_PATH="bas"
+```
+
+### Assembly-Only Project
+
+```bash devcpc.conf
+# Pure assembly (no 8BP)
+SOURCE="main"
+TARGET="demo"
+LOADADDR=0x4000
+
+# Screens only
+LOADER_SCREEN="assets/screen"
+MODE=1
+```
+
+## Tips
+
+<Tip>
+**Only configure paths you need.** Comment out unused paths to keep configuration clean.
+</Tip>
+
+<Tip>
+**Use consistent naming.** For 8BP projects, name your main ASM file `make_all_projectname.asm`.
+</Tip>
+
+<Tip>
+**Organize by type.** Keep source files in `asm/`, `bas/`, `C/` and resources in `assets/`.
+</Tip>
+
+## See Also
+
+- [Build Options](/config/build-options) - Compilation settings
+- [Graphics Configuration](/config/graphics) - PNG conversion details
+- [Project Settings](/config/project-settings) - Output directories

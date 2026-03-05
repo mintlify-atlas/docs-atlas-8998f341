@@ -1,0 +1,700 @@
+---
+title: 'Configuration'
+description: 'Complete guide to configuring your DevCPC project with devcpc.conf'
+icon: 'gear'
+---
+
+The `devcpc.conf` file is the central configuration file for your DevCPC project. It controls compilation behavior, output formats, paths, and emulator settings.
+
+## Configuration File Location
+
+The configuration file must be located in your project root:
+
+```
+my-project/
+├── devcpc.conf    ← Configuration file
+├── ASM/
+├── bas/
+└── ...
+```
+
+<Info>
+  `devcpc.conf` is automatically created when you run `devcpc new <project-name>`.
+</Info>
+
+## Configuration Sections
+
+The configuration file is organized into logical sections:
+
+### 1. Basic Configuration
+
+#### PROJECT_NAME (Required)
+
+The name of your project, used for generated DSK, CDT, and CPR files.
+
+```bash
+PROJECT_NAME="MI_JUEGO"
+```
+
+**Usage:**
+- DSK filename: `${PROJECT_NAME}.dsk`
+- CDT filename: `${PROJECT_NAME}.cdt`
+- CPR filename: `${PROJECT_NAME}.cpr`
+- Map filename: `${PROJECT_NAME}.map`
+
+<Warning>
+  Use uppercase and avoid spaces. Use underscores instead: `MY_GAME` not `my game`.
+</Warning>
+
+#### BUILD_LEVEL (Required for 8BP Projects)
+
+Determines which 8BP features are included (0-4). See [Build Levels](/concepts/build-levels) for details.
+
+```bash
+BUILD_LEVEL=0
+```
+
+| Value | Description | MEMORY Value |
+|-------|-------------|-------------|
+| `0` | All functionalities | 23599 |
+| `1` | Maze games | 24999 |
+| `2` | Scrolling games | 24799 |
+| `3` | Pseudo-3D games | 23999 |
+| `4` | Basic features | 25299 |
+
+### 2. Source Code Paths
+
+<AccordionGroup>
+  <Accordion title="ASM_PATH - Assembly Source" icon="code">
+    Path to your main assembly file (not a directory).
+    
+    ```bash
+    # For 8BP projects - points to main assembly file
+    ASM_PATH="asm/make_all_mygame.asm"
+    ```
+    
+    **For non-8BP ASM projects**, use these additional variables:
+    ```bash
+    ASM_PATH="ASM"           # Directory path
+    SOURCE="main"            # Source filename (without .asm)
+    TARGET="program"         # Output binary name
+    LOADADDR=0x1200         # Load address
+    ```
+    
+    <Note>
+      **Optional**: Comment out if not using assembly code.
+    </Note>
+  </Accordion>
+
+  <Accordion title="BASIC_PATH - BASIC Programs" icon="file-code">
+    Path to directory containing BASIC files. All `.bas` files are automatically added to the DSK.
+    
+    ```bash
+    BASIC_PATH="bas"
+    ```
+    
+    **What it does:**
+    - Scans directory for `*.bas` files
+    - Adds each file to DSK with its original name
+    - Files appear in DSK catalog as `LOADER.BAS`, `MENU.BAS`, etc.
+    
+    <Note>
+      **Optional**: Comment out if not using BASIC.
+    </Note>
+  </Accordion>
+
+  <Accordion title="RAW_PATH - Raw Binary Files" icon="file-binary">
+    Path to directory containing raw binary files (no AMSDOS header).
+    
+    ```bash
+    RAW_PATH="raw"
+    ```
+    
+    **Use cases:**
+    - Custom data files
+    - Pre-compiled binaries from other tools
+    - Graphics or sound data
+    
+    <Note>
+      **Optional**: Comment out if not using raw files.
+    </Note>
+  </Accordion>
+
+  <Accordion title="C_PATH - C Source Code" icon="c">
+    Configuration for C code compilation with SDCC.
+    
+    ```bash
+    C_PATH="C"
+    C_SOURCE="main.c"
+    C_CODE_LOC=20000
+    ```
+    
+    **Variables:**
+    - `C_PATH`: Directory containing C source
+    - `C_SOURCE`: Main C file to compile
+    - `C_CODE_LOC`: Memory address where C code loads
+    
+    **Memory constraint:**
+    ```
+    C_CODE_LOC + compiled_size < 23999
+    ```
+    
+    <Warning>
+      Requires SDCC compiler installed. C code must not exceed address 23999 to avoid overwriting 8BP library.
+    </Warning>
+  </Accordion>
+</AccordionGroup>
+
+### 3. Output Directories
+
+Control where build artifacts are stored.
+
+```bash
+# Intermediate build files (.bin, .lst, .map, .ihx)
+OBJ_DIR="obj"
+
+# Final distributable files (.dsk, .cdt, .cpr)
+DIST_DIR="dist"
+
+# Disk image filename
+DSK="${PROJECT_NAME}.dsk"
+```
+
+<Info>
+  These directories are automatically created during build and removed with `devcpc clean`.
+</Info>
+
+### 4. Tape Image (CDT) Configuration
+
+Generate cassette tape images alongside your DSK.
+
+```bash
+# Enable CDT generation
+CDT="${PROJECT_NAME}.cdt"
+
+# Files to include in tape (order matters!)
+CDT_FILES="loader.bas 8BP0.bin main.bin"
+```
+
+<Tabs>
+  <Tab title="Configuration">
+    **CDT** - Filename for the tape image
+    ```bash
+    CDT="${PROJECT_NAME}.cdt"  # Uses project name
+    # or
+    CDT="my_tape.cdt"          # Custom name
+    ```
+    
+    **CDT_FILES** - Space-separated list of files to include
+    ```bash
+    CDT_FILES="loader.bas 8BP0.bin game.bin screen.scn"
+    ```
+  </Tab>
+  
+  <Tab title="File Order">
+    The order in `CDT_FILES` is **critical** - files are loaded sequentially:
+    
+    ```bash
+    # ✅ Correct: loader first, then data
+    CDT_FILES="loader.bas 8BP0.bin game.bin"
+    
+    # ❌ Wrong: will try to load binaries before loader
+    CDT_FILES="game.bin loader.bas 8BP0.bin"
+    ```
+    
+    Typical order:
+    1. BASIC loader (`.bas`)
+    2. 8BP library (`.bin`)
+    3. Game code (`.bin`)
+    4. Additional data files
+  </Tab>
+  
+  <Tab title="Supported Types">
+    | Extension | Type | Description | CPC Load Command |
+    |-----------|------|-------------|------------------|
+    | `.bas` | BASIC | Tokenized BASIC | `RUN"` |
+    | `.bin` | Binary | Machine code with header | `LOAD"FILE.BIN"` |
+    | `.scn` | Screen | 16KB screen at &C000 | `LOAD"FILE.SCN",&C000` |
+    | `.txt` | Raw | Data without header | Direct read |
+  </Tab>
+</Tabs>
+
+<Note>
+  Comment out `CDT` and `CDT_FILES` to disable tape generation.
+</Note>
+
+### 5. Cartridge (CPR) Configuration
+
+Generate cartridge files for GX-4000 and CPC Plus.
+
+```bash
+# Enable CPR generation
+CPR="${PROJECT_NAME}.cpr"
+
+# File to auto-execute on boot (no 'run' command needed)
+CPR_EXECUTE="loader.bas"
+```
+
+<AccordionGroup>
+  <Accordion title="CPR - Cartridge Filename" icon="floppy-disk">
+    ```bash
+    CPR="${PROJECT_NAME}.cpr"  # Uses project name
+    # or
+    CPR="my_cartridge.cpr"     # Custom name
+    ```
+    
+    The cartridge is generated from your DSK image.
+  </Accordion>
+  
+  <Accordion title="CPR_EXECUTE - Auto-Execute File" icon="play">
+    Specifies which file runs when the cartridge is inserted.
+    
+    ```bash
+    # Just the filename - DevCPC adds run" automatically
+    CPR_EXECUTE="disc"        # Default DSK program
+    CPR_EXECUTE="8BP0.BIN"    # Direct binary
+    CPR_EXECUTE="loader.bas"  # BASIC loader
+    ```
+    
+    <Warning>
+      **Do not include** `run"` in the value - DevCPC handles this automatically.
+      
+      ```bash
+      # ✅ Correct
+      CPR_EXECUTE="loader.bas"
+      
+      # ❌ Wrong
+      CPR_EXECUTE='run"loader.bas"'
+      ```
+    </Warning>
+  </Accordion>
+</AccordionGroup>
+
+**Compatibility:**
+- ✅ GX-4000 (console)
+- ✅ CPC 464+ 
+- ✅ CPC 6128+
+- ❌ CPC 464/664/6128 (no cartridge port)
+
+<Note>
+  Comment out `CPR` to disable cartridge generation.
+</Note>
+
+### 6. Emulator Settings
+
+Configure RetroVirtualMachine for testing with `devcpc run`.
+
+```bash
+# Path to RetroVirtualMachine executable
+RVM_PATH="/Applications/Retro Virtual Machine 2.app/Contents/MacOS/Retro Virtual Machine 2"
+
+# CPC model to emulate (464, 664, 6128)
+CPC_MODEL=464
+
+# File to auto-execute (DSK only)
+RUN_FILE="8BP0.BIN"
+
+# Execution mode: "auto", "dsk", or "cdt"
+RUN_MODE="auto"
+```
+
+<Tabs>
+  <Tab title="RVM_PATH Examples">
+    Platform-specific paths:
+    
+    **macOS:**
+    ```bash
+    RVM_PATH="/Applications/Retro Virtual Machine 2.app/Contents/MacOS/Retro Virtual Machine 2"
+    ```
+    
+    **Linux:**
+    ```bash
+    RVM_PATH="/usr/local/bin/RetroVirtualMachine"
+    ```
+    
+    **Windows (WSL):**
+    ```bash
+    RVM_PATH="/mnt/c/Program Files/RetroVirtualMachine/RetroVirtualMachine.exe"
+    ```
+    
+    <Warning>
+      Only **v2.0 BETA-1 R7 (10/07/2019)** supports the development features required by DevCPC.
+    </Warning>
+  </Tab>
+  
+  <Tab title="CPC_MODEL">
+    Choose which Amstrad CPC to emulate:
+    
+    ```bash
+    CPC_MODEL=464   # CPC 464 (tape-based)
+    CPC_MODEL=664   # CPC 664 (disk-based)
+    CPC_MODEL=6128  # CPC 6128 (disk, more RAM)
+    ```
+    
+    **Auto-detection for tape:**
+    - Models 664/6128 automatically use `|TAPE` command when loading CDT
+  </Tab>
+  
+  <Tab title="RUN_MODE">
+    Controls how the emulator loads your game:
+    
+    | Mode | Behavior | Override |
+    |------|----------|----------|
+    | `auto` | Use CDT if configured, else DSK | Default |
+    | `dsk` | Always mount DSK (disk) | `devcpc run --dsk` |
+    | `cdt` | Always mount CDT (tape) | `devcpc run --cdt` |
+    
+    ```bash
+    # Automatically choose DSK or CDT
+    RUN_MODE="auto"
+    
+    # Always use disk
+    RUN_MODE="dsk"
+    
+    # Always use tape
+    RUN_MODE="cdt"
+    ```
+    
+    Command-line overrides:
+    ```bash
+    devcpc run --dsk   # Force DSK regardless of RUN_MODE
+    devcpc run --cdt   # Force CDT regardless of RUN_MODE
+    ```
+  </Tab>
+  
+  <Tab title="RUN_FILE">
+    **DSK only:** File to auto-execute after mounting disk.
+    
+    ```bash
+    RUN_FILE="8BP0.BIN"    # Execute 8BP level 0
+    RUN_FILE="loader.bas"  # Execute BASIC loader
+    RUN_FILE="game.bin"    # Execute game binary
+    ```
+    
+    <Note>
+      Not used for CDT mode. Tape auto-executes the first file with `RUN"`.
+    </Note>
+  </Tab>
+</Tabs>
+
+<Note>
+  All emulator settings are **optional**. Comment them out if not using `devcpc run`.
+</Note>
+
+### 7. Graphics Conversion Settings
+
+Automatically convert PNG images to CPC formats during build.
+
+```bash
+# CPC screen mode for conversions (0, 1, or 2)
+MODE=0
+
+# --- Sprites (PNG → ASM) ---
+SPRITES_PATH="assets/sprites"
+SPRITES_OUT_FILE="ASM/sprites.asm"
+SPRITES_TOLERANCE=8
+SPRITES_TRANSPARENT_INK=""
+
+# --- Loading Screens (PNG → SCN) ---
+LOADER_SCREEN="assets/screen"
+```
+
+<Tabs>
+  <Tab title="MODE">
+    CPC screen mode affects resolution and colors:
+    
+    | Mode | Resolution | Colors | Pixels/Byte |
+    |------|------------|--------|-------------|
+    | `0` | 160×200 | 16 | 2 |
+    | `1` | 320×200 | 4 | 4 |
+    | `2` | 640×200 | 2 | 8 |
+    
+    ```bash
+    MODE=0  # Standard for most games
+    MODE=1  # Higher resolution, fewer colors
+    MODE=2  # Monochrome, highest resolution
+    ```
+  </Tab>
+  
+  <Tab title="Sprite Settings">
+    **SPRITES_PATH**
+    ```bash
+    SPRITES_PATH="assets/sprites"
+    ```
+    Directory containing PNG sprite files (searched recursively).
+    
+    **SPRITES_OUT_FILE**
+    ```bash
+    SPRITES_OUT_FILE="ASM/sprites.asm"
+    ```
+    Where to write the generated ASM sprite data.
+    
+    **SPRITES_TOLERANCE**
+    ```bash
+    SPRITES_TOLERANCE=0   # Exact CPC colors only
+    SPRITES_TOLERANCE=8   # Recommended - small variance
+    SPRITES_TOLERANCE=-1  # Auto - always find closest
+    ```
+    RGB tolerance per channel when matching PNG colors to CPC palette.
+    
+    **SPRITES_TRANSPARENT_INK** (Optional)
+    ```bash
+    SPRITES_TRANSPARENT_INK=""   # No transparency
+    SPRITES_TRANSPARENT_INK="0"  # Use INK 0 (black)
+    SPRITES_TRANSPARENT_INK="26" # Use INK 26 (white)
+    ```
+    INK value (0-26) for transparent pixels (alpha=0 in PNG).
+  </Tab>
+  
+  <Tab title="Screen Settings">
+    **LOADER_SCREEN**
+    ```bash
+    LOADER_SCREEN="assets/screen"
+    ```
+    Directory containing PNG loading screens (searched recursively).
+    
+    **Requirements:**
+    - Mode 0: 160×200 pixels, max 16 colors
+    - Mode 1: 320×200 pixels, max 4 colors  
+    - Mode 2: 640×200 pixels, max 2 colors
+    
+    **Output:**
+    - `.scn` files generated in `obj/`
+    - `.scn.info` files with palette data
+    - Automatically added to DSK
+    
+    **Loading screens in BASIC:**
+    ```basic
+    10 MODE 0
+    20 LOAD"TITLE.SCN",&C000
+    30 ' Configure palette from .scn.info
+    ```
+  </Tab>
+</Tabs>
+
+<Note>
+  **Requires Pillow:** Install with `pip3 install Pillow` to enable graphics conversion.
+</Note>
+
+## Complete Configuration Example
+
+Here's a fully configured `devcpc.conf` for a scrolling platformer game:
+
+```bash
+# ==============================================================================
+# Platformer Game - DevCPC Configuration
+# ==============================================================================
+
+# Basic Settings
+PROJECT_NAME="PLATFORMER"
+BUILD_LEVEL=2  # Scrolling games - includes MAP2SP, UMA
+
+# Source Paths
+ASM_PATH="asm/make_all_platformer.asm"
+BASIC_PATH="bas"
+
+# Output Directories
+OBJ_DIR="obj"
+DIST_DIR="dist"
+DSK="${PROJECT_NAME}.dsk"
+
+# Generate both tape and cartridge versions
+CDT="${PROJECT_NAME}.cdt"
+CDT_FILES="loader.bas 8BP2.bin level1.bin level2.bin"
+
+CPR="${PROJECT_NAME}.cpr"
+CPR_EXECUTE="loader.bas"
+
+# Emulator Configuration
+RVM_PATH="/Applications/Retro Virtual Machine 2.app/Contents/MacOS/Retro Virtual Machine 2"
+CPC_MODEL=464
+RUN_FILE="8BP2.BIN"
+RUN_MODE="auto"
+
+# Graphics Conversion
+MODE=0
+SPRITES_PATH="assets/sprites"
+SPRITES_OUT_FILE="ASM/sprites.asm"
+SPRITES_TOLERANCE=8
+LOADER_SCREEN="assets/screen"
+```
+
+## Validation
+
+Verify your configuration before building:
+
+```bash
+devcpc validate
+```
+
+**Checks performed:**
+- ✅ Required variables set (PROJECT_NAME, BUILD_LEVEL)
+- ✅ Configured paths exist
+- ✅ Required files present (e.g., ASM main file)
+- ✅ Tools installed (Python, SDCC if needed)
+
+**Example output:**
+```
+═══════════════════════════════════════
+  Validar Proyecto: PLATFORMER
+═══════════════════════════════════════
+
+→ Validando configuración...
+✓ PROJECT_NAME: PLATFORMER
+✓ BUILD_LEVEL: 2 (Juegos con scroll)
+
+→ Validando rutas...
+✓ ASM_PATH: asm/make_all_platformer.asm
+✓ BASIC_PATH: bas (2 archivo(s) .bas)
+
+→ Validando herramientas...
+✓ Python 3 instalado
+✓ Pillow instalado
+
+═══════════════════════════════════════
+  Resumen de Validación
+═══════════════════════════════════════
+
+✓ Proyecto válido - Sin errores ni advertencias
+```
+
+## Viewing Current Configuration
+
+```bash
+devcpc info
+```
+
+Displays your current project settings:
+
+```
+═══════════════════════════════════════
+  Configuración del Proyecto
+═══════════════════════════════════════
+
+Proyecto:        PLATFORMER
+Build Level:     2
+
+Rutas configuradas:
+  ✓ ASM:    asm/make_all_platformer.asm
+  ✓ BASIC:  bas
+
+Directorios:
+  Objetos:  obj
+  Salida:   dist
+  DSK:      PLATFORMER.dsk
+  CDT:      PLATFORMER.cdt
+  CPR:      PLATFORMER.cpr
+
+Emulador:
+  Modelo:   464
+  Modo:     auto
+```
+
+## Configuration Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use Comments" icon="comment">
+    Document why you chose specific settings, especially BUILD_LEVEL.
+    
+    ```bash
+    # Using level 2 because game needs
+    # MAP2SP for tile streaming
+    BUILD_LEVEL=2
+    ```
+  </Card>
+  
+  <Card title="Comment Unused Options" icon="hashtag">
+    Keep optional settings commented until needed. Makes config cleaner.
+    
+    ```bash
+    # Uncomment when adding C code:
+    #C_PATH="C"
+    #C_SOURCE="main.c"
+    ```
+  </Card>
+  
+  <Card title="Use Variables" icon="dollar-sign">
+    Leverage `${PROJECT_NAME}` for consistency.
+    
+    ```bash
+    DSK="${PROJECT_NAME}.dsk"
+    CDT="${PROJECT_NAME}.cdt"
+    CPR="${PROJECT_NAME}.cpr"
+    ```
+  </Card>
+  
+  <Card title="Version Control" icon="git">
+    Commit `devcpc.conf` to your repository. Others can build with the same settings.
+  </Card>
+</CardGroup>
+
+## Common Configuration Patterns
+
+<AccordionGroup>
+  <Accordion title="Minimal ASM + BASIC" icon="minimum">
+    ```bash
+    PROJECT_NAME="simple_game"
+    BUILD_LEVEL=4
+    ASM_PATH="asm/make_all_simple.asm"
+    BASIC_PATH="bas"
+    OBJ_DIR="obj"
+    DIST_DIR="dist"
+    DSK="${PROJECT_NAME}.dsk"
+    ```
+  </Accordion>
+  
+  <Accordion title="Full-Featured Game" icon="star">
+    ```bash
+    PROJECT_NAME="mega_game"
+    BUILD_LEVEL=0
+    ASM_PATH="asm/make_all_mega.asm"
+    BASIC_PATH="bas"
+    OBJ_DIR="obj"
+    DIST_DIR="dist"
+    DSK="${PROJECT_NAME}.dsk"
+    CDT="${PROJECT_NAME}.cdt"
+    CDT_FILES="loader.bas 8BP0.bin game.bin"
+    CPR="${PROJECT_NAME}.cpr"
+    CPR_EXECUTE="loader.bas"
+    MODE=0
+    SPRITES_PATH="assets/sprites"
+    SPRITES_OUT_FILE="ASM/sprites.asm"
+    LOADER_SCREEN="assets/screen"
+    ```
+  </Accordion>
+  
+  <Accordion title="C + 8BP Hybrid" icon="c">
+    ```bash
+    PROJECT_NAME="c_game"
+    BUILD_LEVEL=0
+    ASM_PATH="asm/make_all_c_game.asm"
+    BASIC_PATH="bas"
+    C_PATH="C"
+    C_SOURCE="main.c"
+    C_CODE_LOC=20000
+    OBJ_DIR="obj"
+    DIST_DIR="dist"
+    DSK="${PROJECT_NAME}.dsk"
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Build Levels" icon="layer-group" href="/concepts/build-levels">
+    Learn how to optimize memory with BUILD_LEVEL
+  </Card>
+  
+  <Card title="Project Structure" icon="folder-tree" href="/concepts/project-structure">
+    Understand where files are located
+  </Card>
+  
+  <Card title="Quickstart Guide" icon="rocket" href="/quickstart">
+    Start building your first project
+  </Card>
+  
+  <Card title="Commands Reference" icon="terminal" href="/cli/build">
+    Explore all available commands
+  </Card>
+</CardGroup>

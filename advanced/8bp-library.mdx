@@ -1,0 +1,167 @@
+---
+title: "8BP Library"
+description: "Understanding the 8bits de Poder game library"
+icon: "book"
+---
+
+## What is 8BP?
+
+8BP (8 Bits de Poder / 8 Bits of Power) is a comprehensive game development library for Amstrad CPC created by [jjaranda13](https://github.com/jjaranda13). It provides high-level commands for sprite management, scrolling, tile maps, 3D effects, and more.
+
+DevCPC is designed to seamlessly integrate with 8BP, providing automated compilation and optimization through BUILD_LEVEL settings.
+
+## Key Features
+
+8BP provides:
+
+- **Sprite management** with masking and collision detection
+- **Tile-based maps** with scrolling support
+- **Layout system** for maze-style games
+- **Pseudo-3D effects** for racing/simulation games  
+- **Universal Multidirectional Automatic scrolling** (UMA)
+- **BASIC integration** via firmware commands (|PSPRITE, |LAYOUT, etc.)
+
+## BUILD_LEVEL Optimization
+
+DevCPC's BUILD_LEVEL system allows you to optimize 8BP by including only the features you need:
+
+<CardGroup cols={2}>
+  <Card title="Level 0: All Features" icon="star">
+    **Memory:** 23599  
+    **Size:** 19120 bytes  
+    **Commands:** All (|LAYOUT, |COLAY, |MAP2SP, |UMA, |3D)
+  </Card>
+  
+  <Card title="Level 1: Maze Games" icon="cube">
+    **Memory:** 24999  
+    **Size:** 17620 bytes  
+    **Commands:** |LAYOUT, |COLAY
+  </Card>
+  
+  <Card title="Level 2: Scrolling Games" icon="arrows">
+    **Memory:** 24799  
+    **Size:** 17820 bytes  
+    **Commands:** |MAP2SP, |UMA
+  </Card>
+  
+  <Card title="Level 3: Pseudo-3D" icon="mountain">
+    **Memory:** 23999  
+    **Size:** 18620 bytes  
+    **Commands:** |3D
+  </Card>
+</CardGroup>
+
+## 8BP Commands
+
+Key 8BP firmware commands available from BASIC:
+
+### Sprite Commands
+
+```basic
+|PSPRITE,address     ' Print sprite at current position
+|GSPRITE,address     ' Get sprite from screen
+|SETUPSP,table       ' Configure sprite table
+|PRINTSPALL          ' Print all active sprites
+|AUTOALL             ' Auto-move all sprites
+```
+
+### Layout Commands (Levels 0, 1)
+
+```basic
+|LAYOUT,address      ' Initialize tile layout
+|COLAY,address       ' Collision detection for layout
+|LOCATESP,x,y        ' Position sprite in layout coordinates
+```
+
+### Scrolling Commands (Levels 0, 2)
+
+```basic
+|MAP2SP,x,y          ' Map to sprite conversion
+|UMA                 ' Universal Multidirectional Automatic scroll
+|SETUPMAP,table      ' Configure map table
+```
+
+### 3D Commands (Levels 0, 3)
+
+```basic
+|3D,params           ' Pseudo-3D rendering
+|SETUP3D,table       ' Configure 3D parameters
+```
+
+## Using 8BP in Your Project
+
+<Steps>
+  <Step title="Set BUILD_LEVEL">
+    Choose the appropriate level in `devcpc.conf`:
+
+    ```bash
+    BUILD_LEVEL=0  # All features
+    ```
+  </Step>
+
+  <Step title="Create assembly files">
+    Your main assembly file should include 8BP:
+
+    ```asm ASM/make_all_mygame.asm
+    ; BUILD_LEVEL will be set automatically by DevCPC
+    ASSEMBLING_OPTION = 0
+    
+    include "8bitsDePoder_v043_001.asm"
+    include "make_graficos_mygame.asm"
+    include "make_codigo_mygame.asm"
+    ```
+  </Step>
+
+  <Step title="Load from BASIC">
+    Load and initialize 8BP:
+
+    ```basic
+    10 MEMORY 23599
+    20 LOAD"8BP0.bin"
+    30 CALL &6B78
+    40 |SETUPSP,@sprites
+    50 |PSPRITE,@player
+    ```
+  </Step>
+</Steps>
+
+## Memory Map
+
+8BP uses specific memory regions:
+
+```
+&0000 - &3FFF  : ROM (not usable)
+&4000 - &7FFF  : Screen memory (Mode 0: &C000-&FFFF)
+&6B78          : 8BP entry point
+&5C30          : Default load address (BUILD_LEVEL 0)
+BASIC MEMORY   : Set to 23599 (Level 0) or higher
+&A800 - &FFFF  : Free RAM for graphics/data
+```
+
+<Warning>
+Never load code or data that overwrites 8BP's memory region (below MEMORY value).
+</Warning>
+
+## Official Documentation
+
+For complete 8BP documentation:
+
+- [8BP GitHub Repository](https://github.com/jjaranda13/8BP)
+- [8BP Manual (PDF)](https://github.com/jjaranda13/8BP/blob/master/8BP_MANUAL.pdf)
+- [8BP Examples](https://github.com/jjaranda13/8BP/tree/master/examples)
+
+## Example Projects
+
+<CardGroup cols={2}>
+  <Card title="8BP Game Example" icon="gamepad" href="/examples/8bp-game">
+    Complete game using 8BP library
+  </Card>
+  <Card title="Build Levels" icon="layer-group" href="/concepts/build-levels">
+    Optimize 8BP for your game type
+  </Card>
+</CardGroup>
+
+## Credits
+
+8BP library created by **José Javier Miranda Ramírez** (jjaranda13)  
+License: Available at [8BP repository](https://github.com/jjaranda13/8BP)

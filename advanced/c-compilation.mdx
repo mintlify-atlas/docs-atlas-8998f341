@@ -1,0 +1,188 @@
+---
+title: "C Compilation"
+description: "Compile C code with SDCC for Amstrad CPC"
+icon: "code"
+---
+
+## Overview
+
+DevCPC supports C compilation using SDCC (Small Device C Compiler), allowing you to write game logic in C while leveraging the 8BP library or direct firmware calls.
+
+## Requirements
+
+<Steps>
+  <Step title="Install SDCC">
+    Install SDCC for your platform:
+
+    <CodeGroup>
+    ```bash macOS
+    brew install sdcc
+    ```
+
+    ```bash Linux
+    sudo apt-get install sdcc
+    ```
+    </CodeGroup>
+
+    Verify installation:
+    ```bash
+    sdcc --version
+    ```
+  </Step>
+
+  <Step title="Configure C settings">
+    Add C configuration to `devcpc.conf`:
+
+    ```bash
+    # C code compilation
+    C_PATH="C"
+    C_SOURCE="main.c"
+    C_CODE_LOC=20000
+    ```
+
+    <Warning>
+    C code must load below address **23999** to avoid overwriting the 8BP library.
+    </Warning>
+  </Step>
+</Steps>
+
+## Configuration Options
+
+<ParamField path="C_PATH" type="string">
+  Directory containing C source files
+</ParamField>
+
+<ParamField path="C_SOURCE" type="string">
+  Main C source file to compile (e.g., `main.c`)
+</ParamField>
+
+<ParamField path="C_CODE_LOC" type="number">
+  Memory address where compiled code will be loaded (must be < 23999)
+</ParamField>
+
+## Memory Limits
+
+The compiled C code must not exceed address **23999 (0x5DBF)** to avoid destroying the 8BP library:
+
+```bash
+# Safe configuration
+C_CODE_LOC=20000  # Loads at 20000
+MEMORY 23599      # In BASIC
+
+# For more space, load C code lower
+C_CODE_LOC=19000
+MEMORY 18999      # In BASIC
+```
+
+## Using 8BP from C
+
+DevCPC includes an 8BP wrapper header for calling 8BP functions from C:
+
+```c C/main.c
+#include "8BP_wrapper/8BP.h"
+
+void main(void) {
+    // Clear screen
+    _CLS();
+    
+    // Set ink colors
+    _INK(0, 0);   // Background black
+    _INK(1, 24);  // Foreground yellow
+    
+    // Draw text
+    _LOCATE(10, 10);
+    _PRINT("Hello from C!");
+    
+    // Wait for key
+    while(!_INKEY()) {}
+}
+```
+
+## Compilation Process
+
+When you run `devcpc build`, the C compilation process:
+
+1. Compiles C source with SDCC targeting Z80
+2. Generates Intel HEX file (.ihx)
+3. Converts HEX to binary with hex2bin
+4. Places binary in `obj/` directory
+5. Adds binary to DSK with correct load address
+6. Verifies memory limits (< 23999)
+
+## Loading from BASIC
+
+Load and execute your C code from BASIC:
+
+```basic
+10 REM Load 8BP with graphics
+20 MEMORY 23599
+30 LOAD"8BP0.bin"
+40 CALL &6B78
+50 REM Load C program
+60 LOAD"main.BIN",20000
+70 CALL 20000
+```
+
+<Note>
+The CALL address matches your `C_CODE_LOC` setting.
+</Note>
+
+## Project Structure
+
+```
+my-game/
+├── C/
+│   ├── main.c              # Your C code
+│   ├── 8BP_wrapper/
+│   │   └── 8BP.h          # 8BP function declarations
+│   └── mini_BASIC/
+│       └── minibasic.h    # BASIC-like functions
+├── ASM/
+│   └── make_all_mygame.asm  # 8BP library
+└── devcpc.conf
+```
+
+## Example Project
+
+See [C Project Example](/examples/c-project) for a complete working example with C and 8BP integration.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Error: Memory limit exceeded">
+    Your compiled code is too large. Solutions:
+    - Use a lower `C_CODE_LOC` value
+    - Reduce BASIC MEMORY accordingly
+    - Optimize C code (remove unused functions)
+    - Compile with `-Wl-r` flag for position-independent code
+  </Accordion>
+
+  <Accordion title="SDCC not found">
+    Install SDCC:
+    ```bash
+    # macOS
+    brew install sdcc
+    
+    # Linux  
+    sudo apt-get install sdcc
+    ```
+  </Accordion>
+
+  <Accordion title="8BP functions not working">
+    Ensure:
+    - 8BP library is loaded first in BASIC
+    - CALL &6B78 executed before loading C code
+    - Memory limits respected (< 23999)
+  </Accordion>
+</AccordionGroup>
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="C Project Example" icon="flask" href="/examples/c-project">
+    Complete C project with SDCC and 8BP
+  </Card>
+  <Card title="8BP Library" icon="book" href="/advanced/8bp-library">
+    Learn about the 8BP game library
+  </Card>
+</CardGroup>
